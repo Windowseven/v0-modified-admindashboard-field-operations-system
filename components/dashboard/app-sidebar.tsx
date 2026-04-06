@@ -21,6 +21,8 @@ import {
   Moon,
   Sun,
   Activity,
+  Rocket,
+  AlertCircle,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 
@@ -62,6 +64,12 @@ const mainNavItems = [
     title: 'Overview',
     icon: LayoutDashboard,
     href: '/dashboard',
+    badge: null,
+  },
+  {
+    title: 'Getting Started',
+    icon: Rocket,
+    href: '/dashboard/getting-started',
     badge: null,
   },
   {
@@ -117,6 +125,13 @@ const analyticsNavItems = [
     title: 'Analytics',
     icon: BarChart3,
     href: '/dashboard/analytics',
+  },
+  {
+    title: 'Alerts',
+    icon: AlertCircle,
+    href: '/dashboard/alerts',
+    badge: '5',
+    badgeVariant: 'destructive' as const,
   },
   {
     title: 'Activity Log',

@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
+import { NotificationsPanel } from './notifications-panel'
 
 interface DashboardHeaderProps {
   title: string
@@ -149,65 +150,8 @@ export function DashboardHeader({ title, breadcrumbs = [] }: DashboardHeaderProp
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Notifications */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative h-9 w-9">
-              <Bell className="h-4 w-4" />
-              {unreadCount > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-[10px]"
-                >
-                  {unreadCount}
-                </Badge>
-              )}
-              <span className="sr-only">Notifications</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel className="flex items-center justify-between">
-              Notifications
-              <Badge variant="secondary" className="text-xs">
-                {unreadCount} new
-              </Badge>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <div className="max-h-80 overflow-auto">
-              {notifications.map((notification) => (
-                <DropdownMenuItem
-                  key={notification.id}
-                  className="flex flex-col items-start gap-1 p-3"
-                >
-                  <div className="flex w-full items-start justify-between gap-2">
-                    <span
-                      className={cn(
-                        'font-medium',
-                        notification.unread && 'text-foreground',
-                        !notification.unread && 'text-muted-foreground'
-                      )}
-                    >
-                      {notification.title}
-                    </span>
-                    {notification.unread && (
-                      <span className="h-2 w-2 rounded-full bg-primary" />
-                    )}
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {notification.description}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {notification.time}
-                  </span>
-                </DropdownMenuItem>
-              ))}
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="justify-center text-sm text-primary">
-              View all notifications
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Notifications Panel */}
+        <NotificationsPanel />
       </div>
     </header>
   )
