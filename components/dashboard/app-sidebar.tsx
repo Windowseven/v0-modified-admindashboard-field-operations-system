@@ -5,24 +5,36 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
-  Map,
   Users,
-  MapPin,
-  FileText,
-  Settings,
-  Bell,
+  FolderKanban,
   BarChart3,
   Shield,
-  Radio,
-  UserCog,
-  Layers,
+  Bell,
+  Settings,
   ChevronDown,
   LogOut,
   Moon,
   Sun,
   Activity,
-  Rocket,
-  AlertCircle,
+  Layers,
+  UserCog,
+  FileSearch,
+  Wrench,
+  Server,
+  Database,
+  HardDrive,
+  Zap,
+  RefreshCw,
+  Bug,
+  Lock,
+  Globe,
+  Gauge,
+  AlertTriangle,
+  History,
+  ToggleLeft,
+  TestTube,
+  Wifi,
+  Power,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 
@@ -59,109 +71,177 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 
-const mainNavItems = [
+// System Overview - Big Picture
+const overviewNavItems = [
   {
-    title: 'Overview',
+    title: 'System Overview',
     icon: LayoutDashboard,
     href: '/dashboard',
     badge: null,
   },
   {
-    title: 'Getting Started',
-    icon: Rocket,
-    href: '/dashboard/getting-started',
-    badge: null,
-  },
-  {
-    title: 'Live Tracking',
-    icon: Radio,
-    href: '/dashboard/tracking',
+    title: 'Real-Time Activity',
+    icon: Activity,
+    href: '/dashboard/activity',
     badge: 'Live',
     badgeVariant: 'default' as const,
   },
-  {
-    title: 'Map & Zones',
-    icon: Map,
-    href: '/dashboard/map',
-    badge: null,
-  },
 ]
 
-const managementNavItems = [
+// Global Management - Platform Control
+const globalManagementItems = [
   {
-    title: 'Team Management',
+    title: 'Global Users',
     icon: Users,
-    href: '/dashboard/teams',
+    href: '/dashboard/users',
     subItems: [
-      { title: 'All Teams', href: '/dashboard/teams' },
-      { title: 'Team Leaders', href: '/dashboard/teams/leaders' },
-      { title: 'Members', href: '/dashboard/teams/members' },
+      { title: 'All Users', href: '/dashboard/users' },
+      { title: 'Supervisors', href: '/dashboard/users/supervisors' },
+      { title: 'Team Leaders', href: '/dashboard/users/team-leaders' },
+      { title: 'Field Workers', href: '/dashboard/users/workers' },
     ],
   },
   {
-    title: 'Zone Management',
-    icon: MapPin,
-    href: '/dashboard/zones',
+    title: 'Projects Overview',
+    icon: FolderKanban,
+    href: '/dashboard/projects',
     subItems: [
-      { title: 'All Zones', href: '/dashboard/zones' },
-      { title: 'Assignments', href: '/dashboard/zones/assignments' },
-      { title: 'Boundaries', href: '/dashboard/zones/boundaries' },
+      { title: 'All Projects', href: '/dashboard/projects' },
+      { title: 'Active Projects', href: '/dashboard/projects/active' },
+      { title: 'Archived', href: '/dashboard/projects/archived' },
     ],
   },
   {
-    title: 'Forms & Tasks',
-    icon: FileText,
+    title: 'Form Templates',
+    icon: FileSearch,
     href: '/dashboard/forms',
     subItems: [
-      { title: 'Form Builder', href: '/dashboard/forms/builder' },
-      { title: 'Templates', href: '/dashboard/forms/templates' },
-      { title: 'Submissions', href: '/dashboard/forms/submissions' },
+      { title: 'Global Templates', href: '/dashboard/forms' },
+      { title: 'Template Library', href: '/dashboard/forms/library' },
     ],
   },
 ]
 
+// Analytics & Insights
 const analyticsNavItems = [
   {
-    title: 'Analytics',
+    title: 'System Analytics',
     icon: BarChart3,
     href: '/dashboard/analytics',
   },
   {
-    title: 'Alerts',
-    icon: AlertCircle,
+    title: 'Audit & Logs',
+    icon: History,
+    href: '/dashboard/audit',
+    badge: null,
+  },
+]
+
+// Security & Monitoring
+const securityNavItems = [
+  {
+    title: 'Security Center',
+    icon: Shield,
+    href: '/dashboard/security',
+    subItems: [
+      { title: 'Overview', href: '/dashboard/security' },
+      { title: 'Threat Detection', href: '/dashboard/security/threats' },
+      { title: 'Session Manager', href: '/dashboard/security/sessions' },
+      { title: 'Access Policies', href: '/dashboard/security/policies' },
+    ],
+  },
+  {
+    title: 'System Alerts',
+    icon: AlertTriangle,
     href: '/dashboard/alerts',
     badge: '5',
     badgeVariant: 'destructive' as const,
   },
+]
+
+// System Maintenance - Dedicated Section
+const maintenanceNavItems = [
   {
-    title: 'Activity Log',
-    icon: Activity,
-    href: '/dashboard/activity',
+    title: 'System Health',
+    icon: Gauge,
+    href: '/dashboard/maintenance',
+  },
+  {
+    title: 'Server Status',
+    icon: Server,
+    href: '/dashboard/maintenance/server',
+  },
+  {
+    title: 'Database',
+    icon: Database,
+    href: '/dashboard/maintenance/database',
+  },
+  {
+    title: 'Backup & Restore',
+    icon: HardDrive,
+    href: '/dashboard/maintenance/backup',
+  },
+  {
+    title: 'Error Tracking',
+    icon: Bug,
+    href: '/dashboard/maintenance/errors',
+  },
+  {
+    title: 'Rate Limiting',
+    icon: Zap,
+    href: '/dashboard/maintenance/rate-limits',
+  },
+  {
+    title: 'Sync Monitor',
+    icon: RefreshCw,
+    href: '/dashboard/maintenance/sync',
+  },
+  {
+    title: 'Storage',
+    icon: HardDrive,
+    href: '/dashboard/maintenance/storage',
+  },
+  {
+    title: 'API Monitor',
+    icon: Globe,
+    href: '/dashboard/maintenance/api',
+  },
+  {
+    title: 'Feature Flags',
+    icon: ToggleLeft,
+    href: '/dashboard/maintenance/features',
+  },
+  {
+    title: 'Test Environment',
+    icon: TestTube,
+    href: '/dashboard/maintenance/sandbox',
   },
 ]
 
-const systemNavItems = [
-  {
-    title: 'User Management',
-    icon: UserCog,
-    href: '/dashboard/users',
-  },
-  {
-    title: 'Roles & Permissions',
-    icon: Shield,
-    href: '/dashboard/roles',
-  },
+// System Configuration
+const configNavItems = [
   {
     title: 'Notifications',
     icon: Bell,
     href: '/dashboard/notifications',
     badge: '3',
-    badgeVariant: 'destructive' as const,
+    badgeVariant: 'secondary' as const,
   },
   {
-    title: 'Settings',
+    title: 'Broadcast',
+    icon: Wifi,
+    href: '/dashboard/broadcast',
+  },
+  {
+    title: 'System Settings',
     icon: Settings,
     href: '/dashboard/settings',
+  },
+  {
+    title: 'Emergency Control',
+    icon: Power,
+    href: '/dashboard/emergency',
+    badge: null,
   },
 ]
 
@@ -181,19 +261,19 @@ export function AppSidebar() {
           {!isCollapsed && (
             <div className="flex flex-col">
               <span className="text-sm font-semibold tracking-tight">Field Sync</span>
-              <span className="text-[10px] text-muted-foreground">Mission Control</span>
+              <span className="text-[10px] text-muted-foreground">System Admin</span>
             </div>
           )}
         </Link>
       </SidebarHeader>
 
       <SidebarContent className="px-2">
-        {/* Main Navigation */}
+        {/* Overview */}
         <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
+          <SidebarGroupLabel>Overview</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNavItems.map((item) => (
+              {overviewNavItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
@@ -224,12 +304,12 @@ export function AppSidebar() {
 
         <SidebarSeparator />
 
-        {/* Management */}
+        {/* Global Management */}
         <SidebarGroup>
-          <SidebarGroupLabel>Management</SidebarGroupLabel>
+          <SidebarGroupLabel>Platform Control</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {managementNavItems.map((item) => (
+              {globalManagementItems.map((item) => (
                 <Collapsible key={item.href} asChild defaultOpen={pathname.startsWith(item.href)}>
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
@@ -267,7 +347,7 @@ export function AppSidebar() {
 
         {/* Analytics */}
         <SidebarGroup>
-          <SidebarGroupLabel>Insights</SidebarGroupLabel>
+          <SidebarGroupLabel>Analytics & Audit</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {analyticsNavItems.map((item) => (
@@ -290,12 +370,111 @@ export function AppSidebar() {
 
         <SidebarSeparator />
 
-        {/* System */}
+        {/* Security */}
         <SidebarGroup>
-          <SidebarGroupLabel>System</SidebarGroupLabel>
+          <SidebarGroupLabel>Security</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {systemNavItems.map((item) => (
+              {securityNavItems.map((item) => 
+                'subItems' in item ? (
+                  <Collapsible key={item.href} asChild defaultOpen={pathname.startsWith(item.href)}>
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton
+                          tooltip={item.title}
+                          isActive={pathname === item.href || pathname.startsWith(item.href + '/')}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                          <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {item.subItems.map((subItem) => (
+                            <SidebarMenuSubItem key={subItem.href}>
+                              <SidebarMenuSubButton
+                                asChild
+                                isActive={pathname === subItem.href}
+                              >
+                                <Link href={subItem.href}>{subItem.title}</Link>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
+                ) : (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === item.href}
+                      tooltip={item.title}
+                    >
+                      <Link href={item.href}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                        {item.badge && (
+                          <Badge
+                            variant={item.badgeVariant}
+                            className="ml-auto h-5 px-1.5 text-[10px]"
+                          >
+                            {item.badge}
+                          </Badge>
+                        )}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        {/* System Maintenance - Dedicated Section */}
+        <SidebarGroup>
+          <Collapsible defaultOpen={pathname.startsWith('/dashboard/maintenance')}>
+            <CollapsibleTrigger asChild>
+              <SidebarGroupLabel className="cursor-pointer hover:text-foreground flex items-center gap-2">
+                <Wrench className="h-3.5 w-3.5" />
+                System Maintenance
+                <ChevronDown className="ml-auto h-3.5 w-3.5 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {maintenanceNavItems.map((item) => (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname === item.href}
+                        tooltip={item.title}
+                      >
+                        <Link href={item.href}>
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        {/* Configuration */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Configuration</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {configNavItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
@@ -334,11 +513,11 @@ export function AppSidebar() {
                   <Avatar className="h-8 w-8">
                     <AvatarImage src="/avatars/admin.jpg" alt="Admin" />
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                      AD
+                      SA
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">Admin User</span>
+                    <span className="truncate font-semibold">System Admin</span>
                     <span className="truncate text-xs text-muted-foreground">admin@fieldsync.io</span>
                   </div>
                   <ChevronDown className="ml-auto h-4 w-4" />
@@ -362,7 +541,7 @@ export function AppSidebar() {
                 <DropdownMenuItem asChild>
                   <Link href="/dashboard/settings">
                     <Settings className="mr-2 h-4 w-4" />
-                    Settings
+                    System Settings
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
