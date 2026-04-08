@@ -1,285 +1,293 @@
-# Field Operations Dashboard - Quick Start Guide
+# FieldSync Admin Dashboard - Quick Start
 
-## 🚀 Get Started in 5 Minutes
+This quick start guide is for the current completed frontend milestone of the FieldSync platform: the Admin Dashboard.
 
-### 1. Access the Dashboard
-Navigate to your application and go to `/dashboard` to access the main overview page.
+FieldSync is being built in stages:
 
-### 2. Main Navigation
+- Admin Dashboard: complete
+- Supervisor Frontend: planned
+- Team Leader Frontend: planned
+- Field Worker Frontend: planned
+- Backend implementation: planned after the main frontend role surfaces are complete
 
-**Sidebar Menu Sections:**
+## 1. Start the Application
 
-#### Main Navigation
-- **Overview** - Dashboard home with key metrics
-- **Getting Started** - Setup wizard (start here!)
-- **Live Tracking** - Real-time team member tracking
-- **Map & Zones** - Zone management and visualization
+Install dependencies:
 
-#### Management
-- **Team Management** - Create and manage teams
-- **Zone Management** - Define geographic zones
-- **Forms & Tasks** - Build custom data collection forms
+```bash
+npm install
+```
 
-#### Analytics
-- **Analytics** - Performance reports and metrics
-- **Alerts** - Notification and alert center
-- **Activity Log** - System activity history
+Run the development server:
 
-#### System
-- **User Management** - Add and manage users
-- **Roles & Permissions** - Set access controls
-- **Notifications** - Alert preferences
-- **Settings** - System configuration
+```bash
+npm run dev
+```
 
-### 3. Key Features
+Open the app in your browser:
 
-#### Dashboard Overview
-The main dashboard displays:
-- 4 key metrics with trend indicators
-- Daily activity trends
-- Team status overview
-- Recent activities
-- Live users map
-- Zone coverage data
+```txt
+http://localhost:3000/dashboard
+```
 
-#### Getting Started Wizard
-Complete 6 setup steps:
-1. Create your first team
-2. Define geographic zones
-3. Create custom forms
-4. Add users and assign roles
-5. Enable live tracking
-6. Review analytics
+## 2. What You Are Accessing Right Now
 
-#### Real-Time Tracking
-Monitor your teams with:
-- Interactive map view
-- Live GPS locations
-- Status indicators (Online/Offline/Idle)
-- Location history
-- Team filtering
+The current frontend scope is the Admin Dashboard, which acts as the system-level control plane for FieldSync.
 
-#### Team Management
-Manage teams efficiently:
-- View all teams with metrics
-- Create new teams
-- Assign team leaders
-- Add/remove members
-- Track team performance
+This means the current UI focuses on:
 
-#### Forms Builder
-Create data collection forms:
-- Multi-step forms
-- Custom field types
-- Conditional logic
-- Response tracking
-- Export data
+- Global system visibility
+- User and supervisor oversight
+- Project monitoring
+- Security review
+- Audit and analytics
+- System maintenance and operational controls
 
-#### Analytics Dashboard
-Analyze performance:
-- Daily activity trends
-- Task distribution
-- Zone performance metrics
-- Team completion rates
-- Coverage analysis
+This is not yet the Supervisor, Team Leader, or Field Worker frontend.
 
-#### Alerts & Notifications
-Stay informed with:
-- Real-time alerts
-- Notification filters
-- Priority levels
-- Unread badge counter
-- Alert management
+## 3. Main Navigation
 
-### 4. Common Tasks
+The sidebar is organized into the following sections.
 
-#### Create a Team
-1. Go to **Team Management**
-2. Click **Create New Team** button
-3. Fill in team details
-4. Select team leader
-5. Click **Create Team**
+### System Overview
 
-#### Define a Zone
-1. Go to **Map & Zones**
-2. Click **Create Zone** button
-3. Set zone name and coordinates
-4. Define radius and priority
-5. Click **Create Zone**
+- System Overview
+- Real-Time Activity
 
-#### Add a User
-1. Go to **User Management**
-2. Click **Add User** button
-3. Enter email and select role
-4. Choose assigned team
-5. Click **Invite User**
+### Platform Control
 
-#### Monitor Team Tracking
-1. Go to **Live Tracking**
-2. Select team from dropdown
-3. View live map with team members
-4. Click on team member for details
-5. Check location history timeline
+- Global Users
+- Supervisors
+- Projects Overview
+- Global Form Templates
 
-#### View Analytics
-1. Go to **Analytics**
-2. Select time range (day/week/month/year)
-3. View performance charts
-4. Check team metrics
-5. Export reports if needed
+### Analytics and Audit
 
-#### Check Alerts
-1. Click **Alerts** in sidebar
-2. View alert list
-3. Filter by severity or type
-4. Click to read full details
-5. Mark as read or delete
+- System Analytics
+- Audit and Logs
 
-### 5. Notifications
+### Security
 
-#### Getting Notifications
-- Look for the bell icon in the header
-- Badge shows unread count
-- Click to open notification panel
-- View recent notifications
-- Click "View all" for complete list
+- Security Center
+- System Alerts
 
-#### Notification Types
-- **Critical** (Red) - Urgent issues
-- **Warning** (Amber) - Attention needed
-- **Success** (Green) - Task completed
-- **Info** (Blue) - General information
+### System Maintenance
 
-### 6. Sidebar Features
+- System Health
+- Server Status
+- Database
+- Backup and Restore
+- Error Tracking
+- Rate Limiting
+- Sync Monitor
+- Storage
+- API Monitor
+- Feature Flags
+- Test Environment
 
-#### Theme Toggle
-- Click the moon/sun icon
-- Switch between dark and light modes
-- Preference is remembered
+### Configuration
 
-#### User Menu
-- Click profile icon
-- Access account settings
-- View preferences
-- Logout option
+- Notifications
+- Broadcast
+- System Settings
+- Emergency Control
 
-#### Navigation
-- Click icons to collapse/expand menu
-- Hover for tooltips
-- Click text for navigation
-- Active page is highlighted
+## 4. Recommended First Tour
 
-### 7. Search & Filter
+If you are opening the project for the first time, use this route order:
 
-#### Using Search
-1. Click search icon in header
-2. Type name, ID, or keyword
-3. Results appear in real-time
-4. Press Enter to search
+1. `/dashboard`
+   Review the platform overview, KPIs, activity, and quick actions.
+2. `/dashboard/users`
+   Explore global user management and role-based user tabs.
+3. `/dashboard/supervisors`
+   Review supervisor visibility and moderation controls.
+4. `/dashboard/projects`
+   Inspect project oversight and status filtering.
+5. `/dashboard/security`
+   Review the security center, threats, sessions, and access policies.
+6. `/dashboard/audit`
+   Check the system audit trail and event history.
+7. `/dashboard/maintenance`
+   Explore operational and maintenance-level views.
 
-#### Advanced Filters
-1. Click **Filters** button
-2. Select filter criteria
-3. Filter count badge appears
-4. Click **Clear** to reset
-5. Filters apply instantly
+## 5. Key Areas and What They Mean
 
-### 8. Settings & Configuration
+### System Overview
 
-#### Access Settings
-1. Go to **Settings** (bottom of menu)
-2. Select category:
-   - System Config
-   - Roles & Permissions
-   - Notification Preferences
-   - API Configuration
-   - Backup & Maintenance
+The main dashboard summarizes the current platform state, including:
 
-#### Change Preferences
-1. Click setting option
-2. Modify values
-3. Click **Save** button
-4. Confirmation message appears
-5. Changes take effect immediately
+- Global usage metrics
+- System health indicators
+- Activity trends
+- User distribution
+- Recent activity
+- Quick navigation shortcuts
 
-### 9. Tips & Tricks
+### Global Users
 
-✅ **Quick Actions**
-- Use keyboard shortcuts (coming soon)
-- Pin favorite pages
-- Create custom dashboards
+This section gives the Admin a platform-wide view of users across roles. You can:
 
-✅ **Data Management**
-- Use advanced filters for better results
-- Export data for external use
-- Archive completed items
+- View all users
+- Filter by role
+- Filter by status
+- Open role-specific tabs
+- Access moderation-style actions
 
-✅ **Performance**
-- Check analytics regularly
-- Review alerts daily
-- Track team metrics
-- Monitor zone coverage
+### Supervisors
 
-✅ **Best Practices**
-- Keep team assignments updated
-- Review permissions regularly
-- Archive old forms and data
-- Backup configuration regularly
+This section is for system-level visibility into supervisors. It supports:
 
-### 10. Mobile Access
+- Reviewing supervisor accounts
+- Monitoring activity-related data
+- Investigating supervisor status
+- Understanding project ownership at a high level
 
-The dashboard is fully responsive:
-- **Mobile**: Sidebar collapses, stack layout
-- **Tablet**: Adaptive grid, reduced columns
-- **Desktop**: Full interface with all features
+### Projects Overview
 
-Use the hamburger menu on mobile to access navigation.
+This is a read-only plus control-layer project view for Admin. It helps you:
 
-## 🎯 Common Questions
+- See all projects across the system
+- Review active versus frozen projects
+- Inspect project ownership
+- Understand activity level and moderation options
 
-**Q: How do I invite new team members?**  
-A: Go to User Management → Add User → Fill in details → Send invite
+### Global Form Templates
 
-**Q: How do I track team members in real-time?**  
-A: Go to Live Tracking → Select team → View interactive map
+This section represents the admin-level template layer. It allows:
 
-**Q: How do I create custom forms?**  
-A: Go to Forms & Tasks → Form Builder → Design form → Save
+- Reviewing global reusable templates
+- Opening the create-template flow
+- Managing template visibility and status conceptually
 
-**Q: How do I view team performance?**  
-A: Go to Analytics → Select metrics → View charts and reports
+### Security Center
 
-**Q: How do I set user roles and permissions?**  
-A: Go to Settings → Roles & Permissions → Configure access levels
+This area groups together:
 
-## 📞 Support
+- Security overview
+- Threat detection
+- Session management
+- Access policies
 
-- Check **Getting Started** for comprehensive guide
-- Review **Documentation** for detailed features
-- Watch **Video Tutorials** for step-by-step help
-- Contact support team for assistance
+Use it to review suspicious activity, platform sessions, and policy-level controls.
 
-## 🎓 Learning Path
+### Audit and Logs
 
-### Beginner
-1. Visit **Getting Started** page
-2. Follow the 6-step wizard
-3. Explore main dashboard
+This is the investigation surface for platform events. It is useful for:
 
-### Intermediate
-4. Create multiple teams
-5. Define zones
-6. Build custom forms
-7. Invite team members
+- Tracking admin actions
+- Reviewing security-relevant events
+- Inspecting submission and user activity
+- Following system-level history
 
-### Advanced
-8. Set up complex permissions
-9. Configure analytics
-10. Create automated alerts
-11. Integrate external systems
+### System Maintenance
 
----
+This is one of the most important parts of the current dashboard. It covers:
 
-**Ready to get started?** → Go to `/dashboard` now!
+- System health
+- Server and database views
+- Backup and restore
+- Error tracking
+- Rate limiting
+- Sync monitoring
+- Storage monitoring
+- API monitoring
+- Feature flags
+- Test environment tooling
 
-**Need more help?** → Check the Getting Started page for detailed guides.
+### Configuration and Emergency Control
+
+This section supports operational control at platform level, including:
+
+- Notifications
+- Broadcast messages
+- System settings
+- Emergency controls
+
+## 6. Common Workflows
+
+### Review Overall Platform Status
+
+1. Open `/dashboard`
+2. Check KPI cards and system health
+3. Review recent activity
+4. Use quick actions to jump to areas needing attention
+
+### Inspect Global Users
+
+1. Open `/dashboard/users`
+2. Use search and filters
+3. Switch between role tabs
+4. Open user action menus for moderation-style actions
+
+### Check Security Issues
+
+1. Open `/dashboard/security`
+2. Review the overview cards
+3. Open threats, sessions, or policies depending on the issue
+4. Cross-check events in `/dashboard/audit`
+
+### Investigate an Operational Issue
+
+1. Open `/dashboard/alerts`
+2. Review `/dashboard/audit`
+3. Check `/dashboard/security` if the issue is security-related
+4. Check `/dashboard/maintenance` if the issue looks infrastructural
+
+### Review System Maintenance Status
+
+1. Open `/dashboard/maintenance`
+2. Inspect health and performance panels
+3. Drill into server, database, storage, sync, or errors
+4. Review backup, feature flags, or sandbox if needed
+
+## 7. UI Notes
+
+### Sidebar Behavior
+
+- The sidebar supports grouped navigation
+- Active items are highlighted
+- Some sections contain nested links
+- On smaller screens the navigation collapses appropriately
+
+### Notifications
+
+- The header notification control provides a quick in-app notification panel
+- Full alert-style review happens in the alerts section
+
+### Theme Toggle
+
+- The user menu in the sidebar footer includes the theme switch
+- Light and dark mode can be toggled there
+
+## 8. Current Development Reality
+
+When using this quick start, keep in mind:
+
+- The current completed frontend is the Admin Dashboard
+- Some pages represent product-ready interfaces before full backend wiring
+- Supervisor, Team Leader, and Field Worker interfaces are still future frontend phases
+- Backend services will come after the role-based frontend surfaces are completed
+
+## 9. Helpful Documents
+
+For deeper understanding, continue with:
+
+- [README.md](./README.md)
+- [PROJECT DOCUMENTATION.md](./PROJECT%20DOCUMENTATION.md)
+- [MODULE OUTLINE.md](./MODULE%20OUTLINE.md)
+- [ADMIN DASHBOARD UPDATED.md](./ADMIN%20DASHBOARD%20UPDATED.md)
+- [SYSTEM MAINTAINANCE FEATURES.md](./SYSTEM%20MAINTAINANCE%20FEATURES.md)
+
+## 10. First Recommendation
+
+If you want the fastest meaningful walkthrough, start here:
+
+1. `/dashboard`
+2. `/dashboard/users`
+3. `/dashboard/projects`
+4. `/dashboard/security`
+5. `/dashboard/audit`
+6. `/dashboard/maintenance`
+
+That path gives you the clearest view of what the current FieldSync admin milestone already covers.

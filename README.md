@@ -50,6 +50,21 @@ Planned or implied by documentation, but not fully implemented here as a complet
 - Full API and business logic layer
 - Mobile field app workflows
 
+## Project Status
+
+FieldSync is being built in stages as a full platform, not as an admin-only product.
+
+Current frontend delivery status:
+
+- Admin Dashboard: complete
+- Supervisor Frontend: planned
+- Team Leader Frontend: planned
+- Field Worker Frontend: planned
+
+Backend implementation is planned to begin after the main frontend surfaces for all user roles are completed.
+
+This means the current repository already represents the first finished frontend milestone of the larger FieldSync product.
+
 ## Tech Stack
 
 - Next.js 16

@@ -49,6 +49,52 @@ Role model:
 
 This architecture allows the platform to scale as a real product instead of behaving like a single-project demo.
 
+2A. Implementation Strategy and Delivery Phases
+
+FieldSync is planned as a full end-to-end platform, but development is intentionally staged.
+
+The implementation strategy is:
+
+- Build the frontend in role-based phases
+- Complete the major user-facing surfaces first
+- Begin backend implementation after the core frontend experience is fully mapped across all intended roles
+
+Planned frontend phases:
+
+Phase 1: Admin Dashboard
+
+- Focus: system-level control plane
+- Status: complete
+- Includes system overview, users, supervisors, projects, analytics, audit, security, alerts, settings, emergency controls, and maintenance modules
+
+Phase 2: Supervisor Frontend
+
+- Focus: project ownership and operational control
+- Status: planned
+- Expected scope includes project creation, team setup, zone assignment, form management, and project monitoring
+
+Phase 3: Team Leader Frontend
+
+- Focus: execution coordination
+- Status: planned
+- Expected scope includes team task assignment, tracking, submission review, coordination, and field visibility
+
+Phase 4: Field Worker Frontend
+
+- Focus: field execution and data capture
+- Status: planned
+- Expected scope includes task participation, live tracking, form submission, requests, and offline-capable workflows
+
+Phase 5: Backend Implementation
+
+- Focus: services, persistence, APIs, auth flows, real-time infrastructure, sync logic, and production data workflows
+- Status: pending
+- Begins after the major frontend role surfaces are completed
+
+Current project milestone:
+
+- The Admin Dashboard is the first completed frontend milestone of the broader FieldSync platform.
+
 3. How the System Works
 
 Step 1: Authentication
