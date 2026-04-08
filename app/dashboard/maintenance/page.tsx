@@ -66,7 +66,7 @@ const maintenanceSections = [
     description: 'Monitor server performance and uptime',
     icon: Server,
     href: '/dashboard/maintenance/server',
-    status: 'healthy' as const,
+    status: 'healthy' as 'healthy' | 'warning' | 'critical',
     metrics: [
       { label: 'Uptime', value: '99.98%' },
       { label: 'Response', value: '45ms' },
@@ -77,7 +77,7 @@ const maintenanceSections = [
     description: 'Database health and query performance',
     icon: Database,
     href: '/dashboard/maintenance/database',
-    status: 'healthy' as const,
+    status: 'healthy' as 'healthy' | 'warning' | 'critical',
     metrics: [
       { label: 'Connections', value: '128/500' },
       { label: 'Query Time', value: '12ms' },
@@ -88,7 +88,7 @@ const maintenanceSections = [
     description: 'Data backups and recovery options',
     icon: HardDrive,
     href: '/dashboard/maintenance/backup',
-    status: 'healthy' as const,
+    status: 'healthy' as 'healthy' | 'warning' | 'critical',
     metrics: [
       { label: 'Last Backup', value: '2h ago' },
       { label: 'Size', value: '4.2GB' },
@@ -99,7 +99,7 @@ const maintenanceSections = [
     description: 'Monitor and debug system errors',
     icon: Bug,
     href: '/dashboard/maintenance/errors',
-    status: 'warning' as const,
+    status: 'warning' as 'healthy' | 'warning' | 'critical',
     metrics: [
       { label: 'Errors (24h)', value: '23' },
       { label: 'Critical', value: '2' },
@@ -110,7 +110,7 @@ const maintenanceSections = [
     description: 'API rate limits and abuse control',
     icon: Zap,
     href: '/dashboard/maintenance/rate-limits',
-    status: 'healthy' as const,
+    status: 'healthy' as 'healthy' | 'warning' | 'critical',
     metrics: [
       { label: 'Blocked', value: '147' },
       { label: 'Limit', value: '1000/min' },
@@ -121,7 +121,7 @@ const maintenanceSections = [
     description: 'Offline sync status and conflicts',
     icon: RefreshCw,
     href: '/dashboard/maintenance/sync',
-    status: 'warning' as const,
+    status: 'warning' as 'healthy' | 'warning' | 'critical',
     metrics: [
       { label: 'Pending', value: '34' },
       { label: 'Failed', value: '3' },
@@ -132,7 +132,7 @@ const maintenanceSections = [
     description: 'Storage usage and file management',
     icon: HardDrive,
     href: '/dashboard/maintenance/storage',
-    status: 'warning' as const,
+    status: 'warning' as 'healthy' | 'warning' | 'critical',
     metrics: [
       { label: 'Used', value: '78%' },
       { label: 'Files', value: '12.4K' },
@@ -143,7 +143,7 @@ const maintenanceSections = [
     description: 'API endpoints and performance',
     icon: Globe,
     href: '/dashboard/maintenance/api',
-    status: 'healthy' as const,
+    status: 'healthy' as 'healthy' | 'warning' | 'critical',
     metrics: [
       { label: 'Requests (1h)', value: '24.5K' },
       { label: 'Errors', value: '0.02%' },
@@ -154,7 +154,7 @@ const maintenanceSections = [
     description: 'Toggle features dynamically',
     icon: ToggleLeft,
     href: '/dashboard/maintenance/features',
-    status: 'healthy' as const,
+    status: 'healthy' as 'healthy' | 'warning' | 'critical',
     metrics: [
       { label: 'Active', value: '12' },
       { label: 'Beta', value: '3' },
@@ -165,7 +165,7 @@ const maintenanceSections = [
     description: 'Sandbox and testing tools',
     icon: TestTube,
     href: '/dashboard/maintenance/sandbox',
-    status: 'healthy' as const,
+    status: 'healthy' as 'healthy' | 'warning' | 'critical',
     metrics: [
       { label: 'Test Users', value: '5' },
       { label: 'Test Data', value: '1.2GB' },

@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -101,7 +102,7 @@ export default function SettingsPage() {
                   {/* Avatar */}
                   <div className="flex items-center gap-6">
                     <Avatar className="h-20 w-20">
-                      <AvatarImage src="/avatars/admin.jpg" />
+                      <AvatarImage src="/placeholder-user.jpg" />
                       <AvatarFallback className="text-xl">AD</AvatarFallback>
                     </Avatar>
                     <div className="space-y-2">

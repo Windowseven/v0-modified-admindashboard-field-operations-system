@@ -58,10 +58,7 @@ export function ZoneCoverage() {
                   boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
                 }}
                 labelStyle={{ color: 'oklch(0.95 0 0)', fontWeight: 600 }}
-                formatter={(value: number, name: string, props: { payload: typeof zoneData[number] }) => [
-                  `${value}% (Team ${props.payload.team})`,
-                  'Coverage',
-                ]}
+                formatter={(value: number) => [`${value}%`, 'Coverage']}
               />
               <Bar dataKey="coverage" radius={[0, 4, 4, 0]} barSize={24}>
                 {zoneData.map((entry, index) => (
