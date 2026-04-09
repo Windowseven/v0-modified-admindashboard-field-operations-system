@@ -29,6 +29,7 @@ import { NotificationsPanel } from './notifications-panel'
 interface DashboardHeaderProps {
   title: string
   breadcrumbs?: { label: string; href?: string }[]
+  rootCrumb?: { label: string; href: string }
 }
 
 const notifications = [
@@ -66,7 +67,11 @@ const notifications = [
   },
 ]
 
-export function DashboardHeader({ title, breadcrumbs = [] }: DashboardHeaderProps) {
+export function DashboardHeader({
+  title,
+  breadcrumbs = [],
+  rootCrumb = { label: 'Dashboard', href: '/dashboard' },
+}: DashboardHeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = React.useState(false)
   const unreadCount = notifications.filter((n) => n.unread).length
 
@@ -90,7 +95,7 @@ export function DashboardHeader({ title, breadcrumbs = [] }: DashboardHeaderProp
       <Breadcrumb className="hidden md:flex">
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+            <BreadcrumbLink href={rootCrumb.href}>{rootCrumb.label}</BreadcrumbLink>
           </BreadcrumbItem>
           {breadcrumbs.map((crumb, index) => (
             <React.Fragment key={index}>

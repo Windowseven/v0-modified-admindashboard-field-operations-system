@@ -1,17 +1,14 @@
-import { Suspense } from 'react'
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
-import { AppSidebar } from '@/components/dashboard/app-sidebar'
+import { SupervisorSidebar } from '@/components/supervisor/supervisor-sidebar'
 
-export default function DashboardLayout({
+export default function SupervisorLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
     <SidebarProvider>
-      <Suspense fallback={null}>
-        <AppSidebar />
-      </Suspense>
+      <SupervisorSidebar />
       <SidebarInset className="flex flex-col">
         {children}
       </SidebarInset>

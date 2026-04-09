@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   FileSearch, Plus, Search, MoreHorizontal, Eye, Copy, Pencil,
@@ -60,7 +60,7 @@ const categoryColors: Record<string, string> = {
   Community: 'bg-pink-500/10 text-pink-500',
 }
 
-export default function FormsPage() {
+function FormsPageContent() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -260,5 +260,13 @@ export default function FormsPage() {
         </div>
       </main>
     </>
+  )
+}
+
+export default function FormsPage() {
+  return (
+    <Suspense fallback={null}>
+      <FormsPageContent />
+    </Suspense>
   )
 }

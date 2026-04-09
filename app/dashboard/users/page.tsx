@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   Users, Search, MoreHorizontal, CheckCircle2, AlertTriangle, XCircle,
@@ -51,7 +51,7 @@ function normalizeTab(value: string | null): (typeof validTabs)[number] {
   return validTabs.includes(value as (typeof validTabs)[number]) ? (value as (typeof validTabs)[number]) : 'all'
 }
 
-export default function UsersPage() {
+function UsersPageContent() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -274,5 +274,13 @@ export default function UsersPage() {
         </div>
       </main>
     </>
+  )
+}
+
+export default function UsersPage() {
+  return (
+    <Suspense fallback={null}>
+      <UsersPageContent />
+    </Suspense>
   )
 }

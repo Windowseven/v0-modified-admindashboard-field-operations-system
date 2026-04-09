@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { FolderKanban, Search, MoreHorizontal, CheckCircle2, AlertTriangle, XCircle, Users, MapPin, FileText, Eye, Ban, Trash2, Pause, Activity } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard/dashboard-header'
@@ -69,7 +69,7 @@ function normalizeStatus(value: string | null): (typeof validStatuses)[number] {
   return validStatuses.includes(value as (typeof validStatuses)[number]) ? (value as (typeof validStatuses)[number]) : 'all'
 }
 
-export default function ProjectsPage() {
+function ProjectsPageContent() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -254,5 +254,13 @@ export default function ProjectsPage() {
         </div>
       </main>
     </>
+  )
+}
+
+export default function ProjectsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProjectsPageContent />
+    </Suspense>
   )
 }
