@@ -70,8 +70,8 @@ Phase 1: Admin Dashboard
 Phase 2: Supervisor Frontend
 
 - Focus: project ownership and operational control
-- Status: planned
-- Expected scope includes project creation, team setup, zone assignment, form management, and project monitoring
+- Status: implemented as the current supervisor dashboard surface
+- Current scope includes project overview, live map, team management, zone management, forms and tasks, project users, invitations, analytics, audit logs, notifications, and settings
 
 Phase 3: Team Leader Frontend
 
@@ -93,7 +93,9 @@ Phase 5: Backend Implementation
 
 Current project milestone:
 
-- The Admin Dashboard is the first completed frontend milestone of the broader FieldSync platform.
+- The Admin Dashboard and Supervisor Dashboard are the current completed frontend milestones of the broader FieldSync platform.
+- Team Leader and Field Worker frontends remain upcoming phases.
+- Backend implementation is still a later delivery phase after the remaining role surfaces.
 
 3. How the System Works
 
@@ -127,12 +129,21 @@ The Supervisor owns project operations.
 
 Supervisor responsibilities include:
 
+- Starting from a Supervisor Workspace where they see all owned or managed projects
 - Creating and managing projects
+- Opening and switching between projects
 - Creating teams and assigning team leaders
 - Inviting or assigning project members
 - Defining zones and sub-zones on the map
 - Creating project forms or reusing approved templates
 - Assigning teams and tasks within the project
+
+Supervisor flow should be understood in two layers:
+
+- Supervisor Workspace: project list, create project, switch project, cross-project notifications, personal settings
+- Project Dashboard: project overview, teams, zones, forms, tasks, project users, invitations, analytics, audit logs, and project settings
+
+This means project-scoped pages should eventually sit under a selected project context instead of behaving like global Supervisor pages.
 
 Step 5: Team Leader Operations
 

@@ -9,7 +9,7 @@ The platform separates responsibilities across four primary roles:
 - Team Leader: field execution coordinator
 - Field Worker: task executor and data collector
 
-This repository currently focuses on the dashboard experience, admin control surfaces, and supporting product documentation for the broader FieldSync platform.
+This repository currently focuses on the dashboard experience, including both the admin control plane and the supervisor project dashboard, plus supporting product documentation for the broader FieldSync platform.
 
 ## Overview
 
@@ -18,7 +18,12 @@ FieldSync is built around two major layers:
 - Project operations: projects, teams, zones, forms, tracking, submissions, analytics
 - Platform governance: users, sessions, audit logs, security monitoring, alerts, maintenance, backup, storage, API monitoring, and emergency controls
 
-The current UI covers the admin/system-level experience and includes pages for:
+The current UI covers two role-based frontend surfaces:
+
+- Admin dashboard for system-level governance
+- Supervisor dashboard for project-level operations
+
+The admin experience includes pages for:
 
 - System overview
 - Global users and supervisors
@@ -30,15 +35,27 @@ The current UI covers the admin/system-level experience and includes pages for:
 - System settings and emergency controls
 - Maintenance tools such as server health, database, backups, storage, rate limits, sync monitor, feature flags, sandbox, and API monitoring
 
+The supervisor experience includes pages for:
+
+- Project overview
+- Live map and zone visibility
+- Teams and project users
+- Invitations and access control
+- Forms and task coordination
+- Project analytics and audit logs
+- Notifications and profile settings
+
 ## Current Scope
 
-This repository is primarily a frontend/admin-dashboard implementation and product foundation.
+This repository is primarily a frontend dashboard implementation and product foundation.
 
 Implemented in this codebase today:
 
 - Multi-page admin dashboard built with the Next.js App Router
+- Multi-page supervisor dashboard built with the Next.js App Router
 - Dashboard navigation and route structure
 - System-level admin views and control panels
+- Project-level supervisor views and control panels
 - Documentation describing platform architecture and module design
 
 Planned or implied by documentation, but not fully implemented here as a complete production backend:
@@ -57,13 +74,13 @@ FieldSync is being built in stages as a full platform, not as an admin-only prod
 Current frontend delivery status:
 
 - Admin Dashboard: complete
-- Supervisor Frontend: planned
+- Supervisor Dashboard: implemented
 - Team Leader Frontend: planned
 - Field Worker Frontend: planned
 
 Backend implementation is planned to begin after the main frontend surfaces for all user roles are completed.
 
-This means the current repository already represents the first finished frontend milestone of the larger FieldSync product.
+This means the current repository now represents two completed frontend role surfaces of the larger FieldSync product, while backend services and the remaining role frontends are still pending.
 
 ## Tech Stack
 
@@ -148,6 +165,17 @@ Key routes available in the current UI:
 - `/dashboard/maintenance/api`
 - `/dashboard/maintenance/features`
 - `/dashboard/maintenance/sandbox`
+- `/supervisor`
+- `/supervisor/map`
+- `/supervisor/teams`
+- `/supervisor/zones`
+- `/supervisor/forms`
+- `/supervisor/users`
+- `/supervisor/invitations`
+- `/supervisor/analytics`
+- `/supervisor/audit`
+- `/supervisor/notifications`
+- `/supervisor/settings`
 
 ## Project Structure
 
@@ -167,8 +195,20 @@ app/
     supervisors/
     tracking/
     users/
+  supervisor/
+    analytics/
+    audit/
+    forms/
+    invitations/
+    map/
+    notifications/
+    settings/
+    teams/
+    users/
+    zones/
 components/
   dashboard/
+  supervisor/
   ui/
 lib/
 ```
@@ -198,6 +238,12 @@ Open `http://localhost:3000`, then go to:
 http://localhost:3000/dashboard
 ```
 
+Supervisor entry point:
+
+```txt
+http://localhost:3000/supervisor
+```
+
 ### Production build
 
 ```bash
@@ -218,15 +264,16 @@ This repository includes supporting product and architecture documents:
 
 - [PROJECT DOCUMENTATION.md](./PROJECT%20DOCUMENTATION.md)
 - [MODULE OUTLINE.md](./MODULE%20OUTLINE.md)
+- [QUICK_START.md](./QUICK_START.md)
+- [SUPERVISOR DASHBOARD.md](./SUPERVISOR%20DASHBOARD.md)
 - [SYSTEM MAINTAINANCE FEATURES.md](./SYSTEM%20MAINTAINANCE%20FEATURES.md)
 - [ADMIN DASHBOARD UPDATED.md](./ADMIN%20DASHBOARD%20UPDATED.md)
-- [QUICK_START.md](./QUICK_START.md)
 
 ## Notes
 
 - The dashboard is structured as a professional admin interface for a larger field operations system.
 - Some pages represent product-ready control surfaces and documentation-driven architecture before full backend integration.
-- The current repository is best understood as the admin web application and platform design foundation for FieldSync.
+- The current repository is best understood as the admin plus supervisor web application foundation for FieldSync.
 
 ## License
 

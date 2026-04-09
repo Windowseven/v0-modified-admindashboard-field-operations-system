@@ -1,223 +1,347 @@
-🧑‍✈️ SUPERVISOR DASHBOARD (PROJECT LEVEL)
+# SUPERVISOR WORKSPACE AND PROJECT DASHBOARD
 
-Supervisor = Project Owner & Field Operations Controller
+## Purpose
 
-Owns a project
-Manages people, teams, zones, tasks
-Controls everything inside that project
-👀 WHAT SUPERVISOR SEES
-🏠 1. Project Overview Dashboard
+This document defines the intended Supervisor experience for FieldSync after introducing support for one Supervisor owning or managing more than one project.
 
-Supervisor sees real-time project status
+It answers two critical questions:
 
-Includes:
-Project name & status (Active / Paused)
-Total team members
-Number of teams
-Active sessions (users currently in field)
-Assigned zones
-Tasks progress (completed vs pending)
-Recent activity feed
+- What does a Supervisor see before opening a specific project?
+- What can a Supervisor do after entering a specific project?
 
-👉 This is the control center of the project
+This is the correct next step for the product because the current project-level dashboard assumes a single active project. That works for a demo, but it is not enough for a real multi-project field operations platform.
 
-👥 2. Project Users View
+## Core Architectural Change
 
-Supervisor sees only users inside their project
+The Supervisor experience should be split into two layers:
 
-Includes:
-All invited users
-Role breakdown:
-Team Leaders
-Field Users
-User status:
-Active / Offline
-Verified / Not verified
-Can filter by:
-Team
-Role
-Activity
-🔗 3. Invitations & Access Control
+1. Supervisor Workspace
+   This is the pre-project layer where the Supervisor sees all of their projects and chooses what to open.
+2. Project Dashboard
+   This is the project-scoped layer where the Supervisor manages teams, zones, forms, tasks, users, and field activity for one selected project.
 
-Very important for your system 🔥
+This separation is important because project operations only make sense after a project has been selected.
 
-Supervisor sees:
-Invite links
-Pending invitations
-Joined users
+## Why This Change Is Needed
 
-👉 Since users self-register, this is how supervisor controls access
+The previous model treated the Supervisor almost like a one-project owner. That creates several problems:
 
-👨‍👩‍👧 4. Teams Overview
+- A Supervisor with multiple projects has no project selection screen
+- Project-scoped pages become ambiguous because the system does not know which project is active
+- Settings, users, teams, zones, and forms get mixed together without a clear boundary
+- The product cannot scale cleanly to multi-project organizations
 
-Supervisor sees:
+The new model solves this by introducing an explicit project context.
 
-List of all teams
-Team leaders
-Members per team
-Team performance (basic stats)
-🗺️ 5. Zones & Map Overview
+## Supervisor Workspace
 
-Supervisor sees:
+## What The Supervisor Sees Before Entering A Project
 
-All created zones (geofencing)
-Which team is assigned to which zone
-Zone coverage status
-Overlapping zones (if any)
-📡 6. Live Map (Power Feature 🔥)
+The Supervisor Workspace is the first screen after login for a Supervisor.
 
-Supervisor sees:
+The Supervisor should see:
 
-All team members on map (live GPS)
-Team routes
-Movement history
-Zone boundaries
-Nearby clustering of users
+- A list of all projects they own or manage
+- Project cards or table rows with:
+  - Project name
+  - Status such as Active, Paused, Draft, Archived
+  - Team count
+  - Member count
+  - Zone count
+  - Progress summary
+  - Last activity
+  - Created date
+  - Last opened date
+- Search and filtering for projects
+- Quick summary metrics across all their projects
+- Cross-project notifications
+- Their own account/profile entry point
+- A clear `Create Project` action
 
-👉 This is real-time control of the field
+If the Supervisor has no projects, the screen should show an empty state with:
 
-📝 7. Forms & Tasks Overview
+- A message that no projects exist yet
+- A primary button to create the first project
+- Optional onboarding guidance for project setup
 
-Supervisor sees:
+## What The Supervisor Can Do Before Entering A Project
 
-All forms created (assigned to project)
-Task assignments
-Form submission status:
-Pending
-In progress
-Completed
-📊 8. Project Analytics
+At the workspace level, the Supervisor can:
 
-Supervisor sees:
+- Create a new project
+- View all owned projects
+- Open a project
+- Switch between projects
+- Search and filter projects
+- Pause or archive a project if permissions allow
+- Duplicate or reuse a project setup if the product later supports templates or cloning
+- View high-level notifications across projects
+- Access personal account settings
 
-Team performance
-Submissions per team
-Time spent per zone
-Coverage analysis
-Most active users
-🔔 9. Notifications & Activity Feed
+At this level, the Supervisor should not directly manage project teams, project zones, project users, or project forms until a specific project has been opened.
 
-Supervisor sees:
+## Project Dashboard
 
-Help requests
-Task updates
-Form submissions
-System alerts
-🔍 10. Audit Logs (Project-Level)
+After selecting a project, the Supervisor enters a project-scoped dashboard.
 
-Supervisor sees:
+## What The Supervisor Sees Inside A Selected Project
 
-Actions within their project:
-Who submitted what
-Who assigned tasks
-Who changed roles
+Inside one project, the Supervisor should see:
 
-👉 Not global — only project scope
+- Project overview and status
+- Team members and active sessions
+- Teams and team leaders
+- Zones and map coverage
+- Forms and tasks
+- Project users
+- Invitations and join status
+- Live map and field activity
+- Project analytics
+- Project audit logs
+- Project-specific settings
 
-👤 11. Profile & Settings
-Personal info
-Notification settings
-Security (password, sessions)
-⚡ WHAT SUPERVISOR CAN DO
-📁 1. Create & Manage Project
-Create project (initial setup)
-Edit project details
-Activate / pause project
-🔗 2. Invite Users
-Generate invite links
-Control who joins
-Remove users
+All information at this stage must be scoped to the selected project only.
 
-👉 Core entry point of your system
+## What The Supervisor Can Do Inside A Selected Project
 
-👥 3. Assign Roles
-Promote users → Team Leaders
-Assign users to teams
-👨‍👩‍👧 4. Manage Teams
-Create teams
-Assign team leaders
-Add/remove members
-Restructure teams
-🗺️ 5. Create & Manage Zones
-Draw zones on map
-Assign zones to teams
-Modify zones
-Delete zones
-📝 6. Manage Forms (IMPORTANT)
+Inside one selected project, the Supervisor can:
 
-Depending on your design:
+- Edit project details
+- Activate, pause, or archive the project
+- Invite users into that project
+- Assign users to teams
+- Promote users to Team Leader inside that project
+- Create and restructure teams
+- Create and manage zones
+- Assign teams to zones
+- Create or adopt forms for that project
+- Assign tasks to teams or individuals
+- Track field activity in real time
+- Review submissions
+- Analyze performance
+- Review project audit logs
+- Configure project-level settings
 
-Supervisor can:
-Use existing form templates
-Assign forms to teams/zones
-Configure submission mode:
-Individual
-Group
-📋 7. Task Assignment
-Assign tasks to:
-Teams
-Specific users
-Define deadlines
-Set priorities
-👨‍✈️ 8. Manage Team Leaders
-Assign / remove team leaders
-Monitor their activity
-Override decisions if needed
-📡 9. Monitor Live Field Activity
-Track users in real-time
-See movement paths
-Identify inactive users
-📝 10. Review Submissions
-View submitted forms
-Approve / reject (optional advanced feature)
-Request corrections
-🤝 11. Communication Control
-Send announcements
-Respond to help requests
-Coordinate between teams
-📊 12. Analyze Performance
-Compare teams
-Identify slow zones
-Optimize operations
-🔒 13. Manage Project Security
-Control access to project
-Remove suspicious users
-Monitor abnormal behavior
-❗ WHAT SUPERVISOR DOES NOT DO
+## Important Boundary
 
-Very important 👇
+The Supervisor must not do system-level work. Even with multiple projects, the Supervisor still does not:
 
-Supervisor does NOT:
+- Control global system settings
+- Access platform-wide audit logs
+- Manage users outside their own project memberships
+- Configure backend or infrastructure
+- Perform platform maintenance
 
-❌ Control system settings
-❌ Manage users outside their project
-❌ Access system-wide logs
-❌ Configure APIs / backend
-❌ Perform system maintenance
+Those remain Admin responsibilities.
 
-👉 That is Admin responsibility
+## Separation Of Supervisor-Level And Project-Level Views
 
-🧠 FINAL ARCHITECTURE (NOW PERFECT)
-🧑‍💼 Admin (System Level)
-Platform control
-Security
-Maintenance
-Global visibility
-🧑‍✈️ Supervisor (Project Level) ✅
-Creates project
-Invites users
-Manages teams, zones, tasks
-Controls field operations
-👨‍✈️ Team Leader
-Executes supervisor instructions
-Manages team directly
-👤 User
-Executes field work
-🔥 SENIOR INSIGHT
+The product should clearly separate these two concepts:
 
-This Supervisor layer now makes your system:
+### Supervisor-Level Views
 
-✅ Multi-tenant (multiple projects independently)
-✅ Scalable (many supervisors, many teams)
-✅ Real-world ready (used in field ops systems)
-✅ Clean separation of concerns
+- My Projects
+- Create Project
+- Cross-project notifications
+- Personal profile and account settings
+
+### Project-Level Views
+
+- Overview
+- Teams
+- Zones
+- Forms and Tasks
+- Project Users
+- Invitations
+- Map
+- Analytics
+- Audit Logs
+- Project Settings
+
+This separation prevents confusion and keeps navigation predictable.
+
+## Recommended Route Structure
+
+The recommended route structure is:
+
+```txt
+/supervisor
+/supervisor/projects
+/supervisor/projects/new
+/supervisor/projects/[projectId]
+/supervisor/projects/[projectId]/map
+/supervisor/projects/[projectId]/teams
+/supervisor/projects/[projectId]/zones
+/supervisor/projects/[projectId]/forms
+/supervisor/projects/[projectId]/users
+/supervisor/projects/[projectId]/invitations
+/supervisor/projects/[projectId]/analytics
+/supervisor/projects/[projectId]/audit
+/supervisor/projects/[projectId]/settings
+/supervisor/settings
+```
+
+### Route Meaning
+
+- `/supervisor` or `/supervisor/projects`
+  Supervisor workspace and project list
+- `/supervisor/projects/new`
+  New project creation flow
+- `/supervisor/projects/[projectId]/*`
+  Project-scoped pages
+- `/supervisor/settings`
+  Personal Supervisor account settings only
+
+This means project settings must move under the project route, while personal settings stay outside project scope.
+
+## Navigation Model
+
+The Supervisor sidebar should evolve into two modes.
+
+### Mode 1: Workspace Sidebar
+
+Visible before a project is selected:
+
+- My Projects
+- Create Project
+- Notifications
+- Account Settings
+
+### Mode 2: Project Sidebar
+
+Visible after a project is selected:
+
+- Project Overview
+- Live Map
+- Teams
+- Zones
+- Forms and Tasks
+- Project Users
+- Invitations
+- Analytics
+- Audit Logs
+- Project Settings
+
+At the top of the project sidebar there should be a project switcher so the Supervisor can jump between projects without returning to a separate page every time.
+
+## Data Model Direction
+
+The architecture should not assume that one Supervisor equals one project.
+
+Instead, the system should model:
+
+- Users
+- Projects
+- Project memberships
+- Project-scoped roles and permissions
+
+Recommended conceptual model:
+
+- A user can have the global role `Supervisor`
+- The same Supervisor can belong to multiple projects
+- Each project has memberships
+- Membership defines what that user can do inside that specific project
+
+That gives the system room to support:
+
+- One Supervisor owning many projects
+- More than one Supervisor inside one project in the future
+- Delegated project-level administration
+- Cleaner permission handling
+
+## Suggested Membership Concepts
+
+At project level, a membership may eventually include values like:
+
+- Project Owner
+- Supervisor
+- Team Leader
+- Field Worker
+
+This is more scalable than hardcoding all permissions directly into one global role.
+
+## UX States To Support
+
+The Supervisor Workspace should handle these states clearly:
+
+### Zero Projects
+
+- Show empty state
+- Emphasize `Create Project`
+
+### One Project
+
+- Show workspace summary
+- Optionally allow quick resume into the last opened project
+
+### Many Projects
+
+- Show searchable project list
+- Support filtering by status, activity, or ownership
+
+### Returning User
+
+- Show recent projects
+- Show last activity and pending notifications
+
+## Product Rules
+
+These rules should guide implementation:
+
+- No project-scoped page should load without a project context
+- Teams, zones, forms, project users, and project audit must always belong to a selected project
+- Personal settings and project settings must remain separate
+- The Supervisor should always know which project is active
+- Switching projects should be fast and explicit
+
+## Recommended Implementation Direction
+
+The current Supervisor UI can be treated as the first project-level dashboard prototype.
+
+The next improvement should be:
+
+1. Introduce the Supervisor Workspace as the new entry point
+2. Move all operational pages under `/supervisor/projects/[projectId]/...`
+3. Add a project switcher
+4. Separate personal settings from project settings
+5. Update data structures and docs to use project memberships
+
+## Final Architecture Summary
+
+Admin:
+
+- Platform-level control
+- Security, maintenance, audit, policies, system visibility
+
+Supervisor Workspace:
+
+- Sees and manages owned projects
+- Chooses which project to open
+- Creates new projects
+
+Supervisor Project Dashboard:
+
+- Runs one selected project
+- Manages teams, zones, forms, tasks, users, invitations, analytics, and project audit
+
+Team Leader:
+
+- Coordinates team execution inside assigned project scope
+
+Field Worker:
+
+- Executes field work inside assigned project scope
+
+## Final Insight
+
+This change makes the Supervisor experience realistic for a production field operations system.
+
+It improves:
+
+- Multi-project support
+- Navigation clarity
+- Permission boundaries
+- Scalability
+- Future backend design
+
+In short, the Supervisor should not start inside a project by default. The Supervisor should start in a workspace, see their projects, and then choose which project to open.
