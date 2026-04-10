@@ -4,231 +4,223 @@ import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard,
-  Users,
-  Map,
-  BarChart3,
-  Bell,
-  Settings,
-  ChevronDown,
-  LogOut,
-  Moon,
-  Sun,
-  Radio,
-  ClipboardList,
-  UserPlus,
-  Shield,
-  History,
-  Layers,
-  UsersRound,
-  FolderOpen,
+  LayoutDashboard, Map, Users, Layers, FileText,
+  Shield, Settings, Bell, LogOut, ChevronLeft,
+  ChevronRight, Search, Plus, Filter, Globe,
+  FolderOpen, ArrowLeftRight, CheckCircle2,
+  MoreHorizontal, UserCircle,
 } from 'lucide-react'
-import { useTheme } from 'next-themes'
-
-import { cn } from '@/lib/utils'
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
+  Sidebar, SidebarContent, SidebarFooter, SidebarHeader,
+  SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
+  SidebarMenu, SidebarMenuItem, SidebarMenuButton,
   SidebarSeparator,
-  useSidebar,
 } from '@/components/ui/sidebar'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-
-type NavItem = {
-  title: string
-  icon: React.ElementType
-  href: string
-  badge?: string
-  badgeVariant?: 'default' | 'secondary' | 'destructive' | 'outline'
-}
-
-const projectNavItems: NavItem[] = [
-  { title: 'Project Overview', icon: LayoutDashboard, href: '/supervisor' },
-  { title: 'Live Map', icon: Radio, href: '/supervisor/map', badge: 'Live', badgeVariant: 'default' },
-]
-
-const fieldNavItems: NavItem[] = [
-  { title: 'Teams', icon: UsersRound, href: '/supervisor/teams' },
-  { title: 'Zones', icon: Layers, href: '/supervisor/zones' },
-  { title: 'Forms & Tasks', icon: ClipboardList, href: '/supervisor/forms' },
-]
-
-const peopleNavItems: NavItem[] = [
-  { title: 'Project Users', icon: Users, href: '/supervisor/users' },
-  { title: 'Invitations', icon: UserPlus, href: '/supervisor/invitations', badge: '3', badgeVariant: 'secondary' },
-]
-
-const insightNavItems: NavItem[] = [
-  { title: 'Analytics', icon: BarChart3, href: '/supervisor/analytics' },
-  { title: 'Audit Logs', icon: History, href: '/supervisor/audit' },
-]
-
-const configNavItems: NavItem[] = [
-  { title: 'Notifications', icon: Bell, href: '/supervisor/notifications', badge: '5', badgeVariant: 'destructive' },
-  { title: 'Settings', icon: Settings, href: '/supervisor/settings' },
-]
-
-function NavItem({ item, pathname }: { item: NavItem; pathname: string }) {
-  const isActive = pathname === item.href
-  return (
-    <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
-        <Link href={item.href}>
-          <item.icon className="h-4 w-4" />
-          <span>{item.title}</span>
-          {item.badge && (
-            <Badge variant={item.badgeVariant ?? 'secondary'} className="ml-auto h-5 px-1.5 text-[10px]">
-              {item.badge}
-            </Badge>
-          )}
-        </Link>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
-  )
-}
+import { cn } from '@/lib/utils'
+import { mockProjects, getProjectById } from '@/lib/mock-projects'
 
 export function SupervisorSidebar() {
   const pathname = usePathname()
-  const { state } = useSidebar()
-  const { theme, setTheme } = useTheme()
-  const isCollapsed = state === 'collapsed'
+
+  // Determine if we are in a project-scoped route
+  // Pattern: /supervisor/projects/[projectId]/...
+  const pathSegments = pathname.split('/')
+  const isProjectMode = pathSegments[2] === 'projects' && pathSegments[3] && pathSegments[3] !== 'new'
+  const projectId = isProjectMode ? pathSegments[3] : null
+  const project = projectId ? getProjectById(projectId) : null
+
+  const isLinkActive = (href: string) => {
+    if (href === '/supervisor/projects' && pathname === '/supervisor/projects') return true
+    if (href !== '/supervisor/projects' && pathname.startsWith(href)) return true
+    return false
+  }
+
+  // Workspace Navigation Items
+  const workspaceItems = [
+    { title: 'My Projects', icon: FolderOpen, href: '/supervisor/projects' },
+    { title: 'Notifications', icon: Bell, href: '/supervisor/notifications' },
+    { title: 'Settings', icon: Settings, href: '/supervisor/settings' },
+  ]
+
+  // Project Navigation Items
+  const projectItems = [
+    { title: 'Overview', icon: LayoutDashboard, href: `/supervisor/projects/${projectId}` },
+    { title: 'Live Map', icon: Map, href: `/supervisor/projects/${projectId}/map` },
+    { title: 'Teams', icon: Users, href: `/supervisor/projects/${projectId}/teams` },
+    { title: 'Zones', icon: Layers, href: `/supervisor/projects/${projectId}/zones` },
+    { title: 'Forms & Tasks', icon: FileText, href: `/supervisor/projects/${projectId}/forms` },
+    { title: 'Project Users', icon: Shield, href: `/supervisor/projects/${projectId}/users` },
+    { title: 'Invitations', icon: UserCircle, href: `/supervisor/projects/${projectId}/invitations` },
+    { title: 'Analytics', icon: Globe, href: `/supervisor/projects/${projectId}/analytics` },
+    { title: 'Audit Logs', icon: CheckCircle2, href: `/supervisor/projects/${projectId}/audit` },
+    { title: 'Project Settings', icon: Settings, href: `/supervisor/projects/${projectId}/settings` },
+  ]
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      <SidebarHeader className="border-b border-sidebar-border p-4">
-        <Link href="/supervisor" className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold shrink-0">
-            FS
+    <Sidebar collapsible="icon" className="border-r border-border/50">
+      <SidebarHeader className="h-16 flex items-center justify-between px-4 border-b border-border/50">
+        <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+            <Globe className="h-5 w-5" />
           </div>
-          {!isCollapsed && (
-            <div className="grid leading-tight">
-              <span className="font-semibold text-sm">FieldSync</span>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Supervisor</span>
-            </div>
-          )}
-        </Link>
+          <span className="text-sm font-bold tracking-tight uppercase">FieldSync <span className="text-primary">Admin</span></span>
+        </div>
+        <div className="hidden group-data-[collapsible=icon]:flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <Globe className="h-4 w-4" />
+        </div>
       </SidebarHeader>
 
-      {/* Project context pill */}
-      {!isCollapsed && (
-        <div className="px-3 py-2 border-b border-sidebar-border">
-          <div className="flex items-center gap-2 rounded-md bg-primary/10 px-3 py-2">
-            <FolderOpen className="h-3.5 w-3.5 text-primary shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-primary truncate">Urban Survey — Nairobi</p>
-              <p className="text-[10px] text-muted-foreground">Active · 42 members</p>
-            </div>
-            <div className="ml-auto h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-          </div>
-        </div>
-      )}
+      <SidebarContent className="py-2">
+        {isProjectMode && project ? (
+          <>
+            {/* Project Switcher */}
+            <SidebarGroup className="py-2">
+              <SidebarGroupLabel className="px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Active Project</SidebarGroupLabel>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <SidebarMenuButton className="h-12 border border-primary/10 bg-primary/5 hover:bg-primary/10 transition-colors">
+                        <div className="flex items-center gap-3 w-full">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                            <FolderOpen className="h-4 w-4" />
+                          </div>
+                          <div className="flex flex-col items-start min-w-0 group-data-[collapsible=icon]:hidden">
+                            <span className="text-xs font-bold truncate w-full">{project.name}</span>
+                            <span className="text-[10px] text-muted-foreground truncate w-full">{project.location}</span>
+                          </div>
+                          <ArrowLeftRight className="ml-auto h-3 w-3 text-muted-foreground group-data-[collapsible=icon]:hidden" />
+                        </div>
+                      </SidebarMenuButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-64" align="start" side="right">
+                      <DropdownMenuLabel className="text-[10px] font-bold uppercase text-muted-foreground">Switch Project</DropdownMenuLabel>
+                      {mockProjects.filter(p => p.id !== projectId).map(p => (
+                        <DropdownMenuItem key={p.id} asChild className="p-2">
+                          <Link href={`/supervisor/projects/${p.id}`} className="flex items-center gap-3 cursor-pointer">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-muted">
+                              <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold">{p.name}</span>
+                              <span className="text-[10px] text-muted-foreground">{p.location}</span>
+                            </div>
+                          </Link>
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild className="p-2">
+                        <Link href="/supervisor/projects" className="flex items-center gap-3 cursor-pointer text-primary">
+                          <FolderOpen className="h-4 w-4" />
+                          <span className="text-xs font-semibold">Back to Workspace</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="p-2">
+                        <Link href="/supervisor/projects/new" className="flex items-center gap-3 cursor-pointer">
+                          <Plus className="h-4 w-4" />
+                          <span className="text-xs font-semibold">Create New Project</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroup>
 
-      <SidebarContent className="overflow-x-hidden">
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Project Control</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {projectNavItems.map((item) => <NavItem key={item.href} item={item} pathname={pathname} />)}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Field Operations</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {fieldNavItems.map((item) => <NavItem key={item.href} item={item} pathname={pathname} />)}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>People</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {peopleNavItems.map((item) => <NavItem key={item.href} item={item} pathname={pathname} />)}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Insights</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {insightNavItems.map((item) => <NavItem key={item.href} item={item} pathname={pathname} />)}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Configuration</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {configNavItems.map((item) => <NavItem key={item.href} item={item} pathname={pathname} />)}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
+            {/* Project Navigation */}
+            <SidebarGroup>
+              <SidebarGroupLabel className="px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Project Control</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {projectItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isLinkActive(item.href)}
+                        tooltip={item.title}
+                        className={cn(
+                          "transition-all duration-200",
+                          isLinkActive(item.href) && "bg-primary/10 text-primary font-semibold ring-1 ring-primary/20 shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]"
+                        )}
+                      >
+                        <Link href={item.href}>
+                          <item.icon className={cn("h-4 w-4", isLinkActive(item.href) && "text-primary")} />
+                          <span className="text-sm">{item.title}</span>
+                          {isLinkActive(item.href) && (
+                            <div className="ml-auto h-1.5 w-1.5 rounded-full bg-primary group-data-[collapsible=icon]:hidden" />
+                          )}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        ) : (
+          /* Workspace Navigation */
+          <SidebarGroup>
+            <SidebarGroupLabel className="px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Supervisor Workspace</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {workspaceItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isLinkActive(item.href)}
+                      tooltip={item.title}
+                      className={cn(
+                        "transition-all duration-200",
+                        isLinkActive(item.href) && "bg-primary/10 text-primary font-semibold ring-1 ring-primary/20"
+                      )}
+                    >
+                      <Link href={item.href}>
+                        <item.icon className={cn("h-4 w-4", isLinkActive(item.href) && "text-primary")} />
+                        <span className="text-sm">{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-2">
+      <SidebarSeparator className="opacity-50" />
+
+      <SidebarFooter className="py-4">
+        {/* User Profile MiniSection */}
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-                  <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarImage src="/placeholder-user.jpg" alt="Supervisor" />
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">SV</AvatarFallback>
-                  </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">Jane Supervisor</span>
-                    <span className="truncate text-xs text-muted-foreground">supervisor@fieldsync.io</span>
+                <SidebarMenuButton className="h-12 hover:bg-muted/50 transition-colors">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 border border-primary/20">
+                    <span className="text-[10px] font-bold text-primary italic">SU</span>
                   </div>
-                  <ChevronDown className="ml-auto h-4 w-4 shrink-0" />
+                  <div className="flex flex-col items-start min-w-0 group-data-[collapsible=icon]:hidden">
+                    <span className="text-xs font-bold truncate">Field Supervisor</span>
+                    <span className="text-[10px] text-muted-foreground truncate">supervisor@fieldsync.io</span>
+                  </div>
+                  <MoreHorizontal className="ml-auto h-3 w-3 text-muted-foreground group-data-[collapsible=icon]:hidden" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] min-w-56" side="top" align="start" sideOffset={4}>
-                <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-                  {theme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-                  {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-                </DropdownMenuItem>
+              <DropdownMenuContent className="w-56" align="start" side="right">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href="/supervisor/settings">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Profile & Settings
+                    <Settings className="mr-2 h-4 w-4" /> Personal Settings
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive focus:text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Log out
+                <DropdownMenuItem className="text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" /> Sign Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

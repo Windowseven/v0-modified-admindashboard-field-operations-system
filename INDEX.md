@@ -4,8 +4,8 @@ This index reflects the current state of the repository.
 
 Implemented frontend surfaces:
 
-- Admin Dashboard at `/dashboard`
-- Supervisor Dashboard at `/supervisor`
+- Admin Dashboard at `/dashboard` ✅
+- Supervisor Dashboard at `/supervisor` ✅ (with Workspace/Project context)
 
 Still planned:
 
@@ -63,17 +63,11 @@ Admin routes:
 
 Supervisor routes:
 
-- `/supervisor`
-- `/supervisor/map`
-- `/supervisor/teams`
-- `/supervisor/zones`
-- `/supervisor/forms`
-- `/supervisor/users`
-- `/supervisor/invitations`
-- `/supervisor/analytics`
-- `/supervisor/audit`
-- `/supervisor/notifications`
-- `/supervisor/settings`
+- `/supervisor` (Workspace Redirect)
+- `/supervisor/projects` (Project List)
+- `/supervisor/projects/new` (Creation Wizard)
+- `/supervisor/projects/[projectId]/*` (All operational modules)
+- `/supervisor/settings` (Personal settings)
 
 ## Recommended Read Order
 
@@ -89,4 +83,4 @@ Supervisor routes:
 - Supervisor owns project execution, teams, zones, tasks, invitations, and project analytics
 - Team Leader and Field Worker remain future frontend phases
 
-This means the documentation should now be read as an Admin plus Supervisor system, not as an Admin-only frontend.
+This means the documentation should now be read as a complete Admin plus Supervisor system, including multi-project support.

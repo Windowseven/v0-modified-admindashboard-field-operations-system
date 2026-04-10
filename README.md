@@ -1,6 +1,6 @@
-# FieldSync Admin Dashboard
+# FieldSync 
 
-FieldSync Admin Dashboard is a Next.js-based admin and control-plane interface for a real-time field operations platform. It is designed for organizations running distributed field work such as surveys, census programs, outreach campaigns, inspections, and operational monitoring.
+FieldSync is a Next.js-based admin and control-plane interface for a real-time field operations platform. It is designed for organizations running distributed field work such as surveys, census programs, outreach campaigns, inspections, and operational monitoring.
 
 The platform separates responsibilities across four primary roles:
 
@@ -9,7 +9,7 @@ The platform separates responsibilities across four primary roles:
 - Team Leader: field execution coordinator
 - Field Worker: task executor and data collector
 
-This repository currently focuses on the dashboard experience, including both the admin control plane and the supervisor project dashboard, plus supporting product documentation for the broader FieldSync platform.
+This repository currently focuses on the complete dashboard experience, including the admin control plane and the multi-project supervisor workspace, plus supporting product documentation for the broader FieldSync platform.
 
 ## Overview
 
@@ -35,15 +35,9 @@ The admin experience includes pages for:
 - System settings and emergency controls
 - Maintenance tools such as server health, database, backups, storage, rate limits, sync monitor, feature flags, sandbox, and API monitoring
 
-The supervisor experience includes pages for:
-
-- Project overview
-- Live map and zone visibility
-- Teams and project users
-- Invitations and access control
-- Forms and task coordination
-- Project analytics and audit logs
-- Notifications and profile settings
+The supervisor experience follows a two-layer architecture:
+- **Supervisor Workspace**: Project listing, creation, and high-level management
+- **Project Dashboard**: Scoped operational views (Live Map, Teams, Zones, Forms, Analytics, Audit) tied to a specific project context.
 
 ## Current Scope
 
@@ -73,8 +67,8 @@ FieldSync is being built in stages as a full platform, not as an admin-only prod
 
 Current frontend delivery status:
 
-- Admin Dashboard: complete
-- Supervisor Dashboard: implemented
+- Admin Dashboard: **Complete** ✅
+- Supervisor Dashboard: **Complete** ✅ (incl. Project Context architecture)
 - Team Leader Frontend: planned
 - Field Worker Frontend: planned
 
@@ -165,17 +159,20 @@ Key routes available in the current UI:
 - `/dashboard/maintenance/api`
 - `/dashboard/maintenance/features`
 - `/dashboard/maintenance/sandbox`
-- `/supervisor`
-- `/supervisor/map`
-- `/supervisor/teams`
-- `/supervisor/zones`
-- `/supervisor/forms`
-- `/supervisor/users`
-- `/supervisor/invitations`
-- `/supervisor/analytics`
-- `/supervisor/audit`
-- `/supervisor/notifications`
-- `/supervisor/settings`
+- `/supervisor` (Redirects to Workspace)
+- `/supervisor/projects` (Workspace / Project List)
+- `/supervisor/projects/new` (Project Creation Wizard)
+- `/supervisor/projects/[projectId]` (Project Overview)
+- `/supervisor/projects/[projectId]/map` (Live project map)
+- `/supervisor/projects/[projectId]/teams` (Team management)
+- `/supervisor/projects/[projectId]/zones` (Geofencing)
+- `/supervisor/projects/[projectId]/forms` (Forms & Tasks)
+- `/supervisor/projects/[projectId]/users` (Project members)
+- `/supervisor/projects/[projectId]/invitations` (Access control)
+- `/supervisor/projects/[projectId]/analytics` (Project data)
+- `/supervisor/projects/[projectId]/audit` (Project logs)
+- `/supervisor/projects/[projectId]/settings` (Project-specific configuration)
+- `/supervisor/settings` (Personal account settings)
 
 ## Project Structure
 

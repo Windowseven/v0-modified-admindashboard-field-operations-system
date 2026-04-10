@@ -15,9 +15,9 @@ This is the correct next step for the product because the current project-level 
 
 The Supervisor experience should be split into two layers:
 
-1. Supervisor Workspace
+1. Supervisor Workspace ✅
    This is the pre-project layer where the Supervisor sees all of their projects and chooses what to open.
-2. Project Dashboard
+2. Project Dashboard ✅
    This is the project-scoped layer where the Supervisor manages teams, zones, forms, tasks, users, and field activity for one selected project.
 
 This separation is important because project operations only make sense after a project has been selected.
@@ -296,15 +296,13 @@ These rules should guide implementation:
 
 ## Recommended Implementation Direction
 
-The current Supervisor UI can be treated as the first project-level dashboard prototype.
+Status: **Implemented** ✅
 
-The next improvement should be:
-
-1. Introduce the Supervisor Workspace as the new entry point
-2. Move all operational pages under `/supervisor/projects/[projectId]/...`
-3. Add a project switcher
-4. Separate personal settings from project settings
-5. Update data structures and docs to use project memberships
+1. [x] Introduce the Supervisor Workspace as the new entry point
+2. [x] Move all operational pages under `/supervisor/projects/[projectId]/...`
+3. [x] Add a project switcher
+4. [x] Separate personal settings from project settings
+5. [x] Update data structures and docs to use project memberships
 
 ## Final Architecture Summary
 

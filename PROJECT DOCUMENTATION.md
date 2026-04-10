@@ -64,14 +64,16 @@ Planned frontend phases:
 Phase 1: Admin Dashboard
 
 - Focus: system-level control plane
-- Status: complete
+- Status: **Complete**✅
 - Includes system overview, users, supervisors, projects, analytics, audit, security, alerts, settings, emergency controls, and maintenance modules
 
 Phase 2: Supervisor Frontend
 
 - Focus: project ownership and operational control
-- Status: implemented as the current supervisor dashboard surface
-- Current scope includes project overview, live map, team management, zone management, forms and tasks, project users, invitations, analytics, audit logs, notifications, and settings
+- Status: **Complete** ✅
+- Scope includes the two-layer Supervisor experience:
+  - **Supervisor Workspace**: Project listing, search, creation wizard, and switching.
+  - **Project Dashboard**: Context-aware operational modules (Live Map, Teams, Zones, Forms, Analytics, Audit, etc.) scoped to a specific project.
 
 Phase 3: Team Leader Frontend
 
@@ -138,12 +140,12 @@ Supervisor responsibilities include:
 - Creating project forms or reusing approved templates
 - Assigning teams and tasks within the project
 
-Supervisor flow should be understood in two layers:
+Supervisor flow is defined in two layers:
 
-- Supervisor Workspace: project list, create project, switch project, cross-project notifications, personal settings
-- Project Dashboard: project overview, teams, zones, forms, tasks, project users, invitations, analytics, audit logs, and project settings
+- **Supervisor Workspace**: project list, create project, switch project, cross-project notifications, personal settings.
+- **Project Dashboard**: project-specific overview, teams, zones, forms, tasks, project users, invitations, analytics, audit logs, and project settings.
 
-This means project-scoped pages should eventually sit under a selected project context instead of behaving like global Supervisor pages.
+This ensures all operational actions are explicitly tied to a selected project context.
 
 Step 5: Team Leader Operations
 

@@ -4,8 +4,8 @@ This quick start reflects the current frontend state of FieldSync.
 
 Available now in the codebase:
 
-- Admin Dashboard: implemented
-- Supervisor Dashboard: implemented
+- Admin Dashboard: **Complete** ✅
+- Supervisor Dashboard: **Complete** ✅ (incl. Project Context)
 - Team Leader Frontend: planned
 - Field Worker Frontend: planned
 - Backend and production integrations: planned after the remaining role surfaces
@@ -81,32 +81,29 @@ Recommended admin tour:
 Main supervisor route:
 
 ```txt
-/supervisor
+/supervisor (Workspace)
 ```
 
 Key supervisor areas:
 
-- Project Overview
+- Project List (Workspace)
+- Project Creation Wizard
+- Project Dashboard (Scoped)
 - Live Map
-- Teams
-- Zones
+- Teams & Users
+- Zones & Geofencing
 - Forms and Tasks
-- Project Users
-- Invitations
-- Analytics
-- Audit Logs
-- Notifications
-- Settings
+- Analytics & Audit Logs
+- Project settings
+- Personal settings
 
 Recommended supervisor tour:
 
-1. `/supervisor`
-2. `/supervisor/map`
-3. `/supervisor/teams`
-4. `/supervisor/zones`
-5. `/supervisor/forms`
-6. `/supervisor/users`
-7. `/supervisor/analytics`
+1. `/supervisor` (Project List)
+2. `/supervisor/projects/new` (Creation Flow)
+3. `/supervisor/projects/proj-nairobi-2026` (Sample Project Overview)
+4. `/supervisor/projects/proj-nairobi-2026/map` (Live project map)
+5. `/supervisor/projects/proj-nairobi-2026/analytics` (Project data)
 
 ## 5. How to Read the Current State
 
