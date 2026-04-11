@@ -92,6 +92,12 @@ const globalManagementItems = [
     ],
   },
   {
+    title: 'View as Team Leader', icon: Users, href: '/teamleader',
+    subItems: [
+      { title: 'Mission Control', href: '/teamleader/overview' },
+    ],
+  },
+  {
     title: 'Projects Overview', icon: FolderKanban, href: '/dashboard/projects',
     subItems: [
       { title: 'All Projects', href: '/dashboard/projects' },
