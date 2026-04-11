@@ -324,7 +324,7 @@ components/
 
 ---
 
-**Status**: ✅ Complete (Admin + Supervisor)  
-**Version**: 1.1.0  
+**Status**: ✅ Complete (Admin + Supervisor + Team Leader)  
+**Version**: 1.2.0
 **Last Updated**: April 10, 2026  
 **Technology Stack**: Next.js 16.2.0, React 19.2.4, TypeScript, Tailwind CSS v4.2.0, Recharts

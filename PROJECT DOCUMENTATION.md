@@ -78,8 +78,8 @@ Phase 2: Supervisor Frontend
 Phase 3: Team Leader Frontend
 
 - Focus: execution coordination
-- Status: planned
-- Expected scope includes team task assignment, tracking, submission review, coordination, and field visibility
+- Status: **Complete** ✅
+- Scope implemented: team overview, members, map, tasks, forms, performance, notifications, activity, settings (accessible via /teamleader/*)
 
 Phase 4: Field Worker Frontend
 
@@ -95,9 +95,9 @@ Phase 5: Backend Implementation
 
 Current project milestone:
 
-- The Admin Dashboard and Supervisor Dashboard are the current completed frontend milestones of the broader FieldSync platform.
-- Team Leader and Field Worker frontends remain upcoming phases.
-- Backend implementation is still a later delivery phase after the remaining role surfaces.
+- Admin Dashboard ✅, Supervisor Dashboard ✅, Team Leader Dashboard ✅ are complete frontend milestones of the broader FieldSync platform.
+- Field Worker frontend remains upcoming phase.
+- Backend implementation next after Field Worker frontend.
 
 3. How the System Works
 

@@ -6,10 +6,10 @@ Implemented frontend surfaces:
 
 - Admin Dashboard at `/dashboard` ✅
 - Supervisor Dashboard at `/supervisor` ✅ (with Workspace/Project context)
+- Team Leader Dashboard at `/teamleader` ✅
 
 Still planned:
 
-- Team Leader frontend
 - Field Worker frontend
 - Backend and production service wiring
 

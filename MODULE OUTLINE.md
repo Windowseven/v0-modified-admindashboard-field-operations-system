@@ -161,20 +161,20 @@ Responsibilities:
 - Real-time alerts
 - Broadcast delivery support
 
-13. Team Leader Module
+13. Team Leader Module ✅
 
-Leadership control layer.
+Leadership control layer **(Implemented)**.
 
 Responsibilities:
 
-- Assign tasks to team members
-- Choose form filling mode such as individual or group
+- Assign tasks to team members (/teamleader/tasks)
+- Choose form filling mode such as individual or group (/teamleader/forms)
 - Assign a member to fill on behalf of a group
-- Manage sub-zone and task allocation
-- Monitor team progress
+- Manage sub-zone and task allocation (/teamleader/map, /teamleader/members)
+- Monitor team progress (/teamleader/overview, /teamleader/performance)
 - Review submissions
-- Coordinate with other team leaders
-- Receive team notifications
+- Coordinate with other team leaders (/teamleader/notifications)
+- Receive team notifications (/teamleader/activity)
 
 14. Analytics and Reporting Module
 

@@ -18,10 +18,11 @@ FieldSync is built around two major layers:
 - Project operations: projects, teams, zones, forms, tracking, submissions, analytics
 - Platform governance: users, sessions, audit logs, security monitoring, alerts, maintenance, backup, storage, API monitoring, and emergency controls
 
-The current UI covers two role-based frontend surfaces:
+The current UI covers three role-based frontend surfaces:
 
 - Admin dashboard for system-level governance
 - Supervisor dashboard for project-level operations
+- Team Leader dashboard for execution coordination
 
 The admin experience includes pages for:
 
@@ -69,7 +70,7 @@ Current frontend delivery status:
 
 - Admin Dashboard: **Complete** ✅
 - Supervisor Dashboard: **Complete** ✅ (incl. Project Context architecture)
-- Team Leader Frontend: planned
+- Team Leader Dashboard: **Complete** ✅ (incl. execution coordination pages)
 - Field Worker Frontend: planned
 
 Backend implementation is planned to begin after the main frontend surfaces for all user roles are completed.

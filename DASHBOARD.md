@@ -30,7 +30,8 @@ app/dashboard/
 └── settings/                   # System configuration
     └── page.tsx
 
-/supervisor/                    # COMPLETED: Multi-project Supervisor Workspace
+/supervisor/                    # COMPLETED: Multi-project Supervisor Workspace  
+/teamleader/                     # COMPLETED: Team Leader Execution Dashboard
 └── (Dual-layer architecture for project context)
 
 components/dashboard/

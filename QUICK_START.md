@@ -6,9 +6,9 @@ Available now in the codebase:
 
 - Admin Dashboard: **Complete** ✅
 - Supervisor Dashboard: **Complete** ✅ (incl. Project Context)
-- Team Leader Frontend: planned
+- Team Leader Dashboard: **Complete** ✅
 - Field Worker Frontend: planned
-- Backend and production integrations: planned after the remaining role surfaces
+- Backend and production integrations: planned after Field Worker
 
 ## 1. Start the Application
 
