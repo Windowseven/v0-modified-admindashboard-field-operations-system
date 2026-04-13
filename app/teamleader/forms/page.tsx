@@ -1,16 +1,20 @@
+"use client"
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { mockTeamMembers } from '@/lib/mock-teamleader'
-import { FileText, CheckCircle, Clock, Download, Eye, Edit3 } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
+import { FileText, CheckCircle, Clock, Download, Eye, Edit3, X } from 'lucide-react'
 
 const mockFormsData = [
   {
     id: 'form-1',
     title: 'Household Survey v2.1',
     submittedBy: 'Jane Smith',
-    status: 'submitted',
+    initials: 'JS',
+    status: 'submitted' as const,
     timestamp: '2024-04-15 14:23',
     zone: 'Alpha North',
     actions: 2,
@@ -19,7 +23,8 @@ const mockFormsData = [
     id: 'form-2',
     title: 'Asset Inventory',
     submittedBy: 'Mike Johnson',
-    status: 'draft',
+    initials: 'MJ',
+    status: 'draft' as const,
     timestamp: '2024-04-15 13:45',
     zone: 'Alpha South',
     actions: 0,
@@ -28,20 +33,45 @@ const mockFormsData = [
     id: 'form-3',
     title: 'Household Survey v2.1',
     submittedBy: 'Sarah Lee',
-    status: 'pending-review',
+    initials: 'SL',
+    status: 'pending-review' as const,
     timestamp: '2024-04-15 12:10',
     zone: 'Alpha North',
     actions: 1,
   },
-  // Add more
+  {
+    id: 'form-4',
+    title: 'Water Point Assessment',
+    submittedBy: 'Jane Smith',
+    initials: 'JS',
+    status: 'submitted' as const,
+    timestamp: '2024-04-15 11:00',
+    zone: 'Beta West',
+    actions: 0,
+  },
+  {
+    id: 'form-5',
+    title: 'Community Leader Interview',
+    submittedBy: 'Mike Johnson',
+    initials: 'MJ',
+    status: 'pending-review' as const,
+    timestamp: '2024-04-15 09:30',
+    zone: 'Alpha South',
+    actions: 1,
+  },
 ]
 
+const statusConfig = {
+  submitted: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
+  'pending-review': 'bg-orange-500/10 text-orange-500 border-orange-500/30',
+  draft: 'bg-slate-500/10 text-slate-500 border-slate-500/30',
+} as const
+
 export default function FormsPage() {
-  const statusConfig = {
-    submitted: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30',
-    'pending-review': 'bg-orange-500/10 text-orange-500 border-orange-500/30',
-    draft: 'bg-slate-500/10 text-slate-500 border-slate-500/30',
-  } as const
+  const [selectedForm, setSelectedForm] = useState<typeof mockFormsData[0] | null>(null)
+  const [filter, setFilter] = useState<'all' | 'submitted' | 'pending-review' | 'draft'>('all')
+
+  const filtered = filter === 'all' ? mockFormsData : mockFormsData.filter(f => f.status === filter)
 
   return (
     <div className="p-6 space-y-6">
@@ -50,11 +80,25 @@ export default function FormsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Form Submissions</h1>
           <p className="text-muted-foreground">Track form progress and review submissions</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Badge variant="secondary">47 Total</Badge>
-          <Badge className="bg-primary">12 Pending</Badge>
+          <Badge className="bg-orange-500">12 Pending</Badge>
           <Badge variant="outline">3 Drafts</Badge>
         </div>
+      </div>
+
+      {/* Filter tabs */}
+      <div className="flex gap-2 flex-wrap">
+        {(['all', 'submitted', 'pending-review', 'draft'] as const).map(f => (
+          <Button
+            key={f}
+            variant={filter === f ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilter(f)}
+          >
+            {f === 'all' ? 'All' : f.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+          </Button>
+        ))}
       </div>
 
       <Card>
@@ -79,29 +123,29 @@ export default function FormsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mockFormsData.map((form) => (
-                  <TableRow key={form.id} className="hover:bg-accent/50">
+                {filtered.map((form) => (
+                  <TableRow key={form.id} className="hover:bg-accent/50 cursor-pointer" onClick={() => setSelectedForm(form)}>
                     <TableCell className="font-medium">
                       <div className="font-semibold">{form.title}</div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                          <span className="text-xs font-medium">JS</span>
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-xs font-bold text-primary">{form.initials}</span>
                         </div>
                         <span>{form.submittedBy}</span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge className={cn("text-xs", (statusConfig as any)[form.status])}>
+                      <Badge className={cn('text-xs', statusConfig[form.status])}>
                         {form.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                       </Badge>
                     </TableCell>
                     <TableCell>{form.zone}</TableCell>
                     <TableCell className="text-sm">{form.timestamp}</TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setSelectedForm(form)}>
                           <Eye className="h-3 w-3" />
                         </Button>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -147,7 +191,49 @@ export default function FormsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Form Detail Dialog */}
+      <Dialog open={!!selectedForm} onOpenChange={() => setSelectedForm(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{selectedForm?.title}</DialogTitle>
+          </DialogHeader>
+          {selectedForm && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Submitted By</p>
+                  <p className="font-medium">{selectedForm.submittedBy}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Zone</p>
+                  <p className="font-medium">{selectedForm.zone}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Time</p>
+                  <p className="font-medium">{selectedForm.timestamp}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Status</p>
+                  <Badge className={cn('text-xs mt-1', statusConfig[selectedForm.status])}>
+                    {selectedForm.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </Badge>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button className="flex-1">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Approve
+                </Button>
+                <Button variant="outline" className="flex-1">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-

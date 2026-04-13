@@ -1,3 +1,5 @@
+"use client"
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { mockTeamMembers } from '@/lib/mock-teamleader'
@@ -60,18 +62,27 @@ export default function TeamLeaderOverview() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <button className="h-12 rounded-lg border bg-card hover:bg-accent text-card-foreground shadow-sm transition-all flex items-center justify-center gap-2 text-sm font-medium">
+              <Link
+                href="/teamleader/map"
+                className="h-12 rounded-lg border bg-card hover:bg-accent text-card-foreground shadow-sm transition-all flex items-center justify-center gap-2 text-sm font-medium"
+              >
                 <MapPin className="h-4 w-4" />
                 View Map
-              </button>
-              <button className="h-12 rounded-lg border bg-card hover:bg-accent text-card-foreground shadow-sm transition-all flex items-center justify-center gap-2 text-sm font-medium">
+              </Link>
+              <Link
+                href="/teamleader/members"
+                className="h-12 rounded-lg border bg-card hover:bg-accent text-card-foreground shadow-sm transition-all flex items-center justify-center gap-2 text-sm font-medium"
+              >
                 <Users2 className="h-4 w-4" />
                 Members
-              </button>
-              <button className="h-12 rounded-lg border bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all flex items-center justify-center gap-2 text-sm font-medium col-span-2">
+              </Link>
+              <Link
+                href="/teamleader/tasks"
+                className="h-12 rounded-lg border bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all flex items-center justify-center gap-2 text-sm font-medium col-span-2"
+              >
                 <Activity className="h-4 w-4" />
                 Start New Task Assignment
-              </button>
+              </Link>
             </div>
           </CardContent>
         </Card>
@@ -128,4 +139,3 @@ export default function TeamLeaderOverview() {
     </div>
   )
 }
-

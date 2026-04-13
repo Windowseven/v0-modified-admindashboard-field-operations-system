@@ -1,11 +1,25 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+"use client"
+import { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { mockTeamMembers } from '@/lib/mock-teamleader'
+import { cn } from '@/lib/utils'
 import { Bell, MessageCircle, HelpCircle, AlertTriangle, CheckCircle, Clock, User } from 'lucide-react'
 
-const mockNotifications = [
+type NotificationType = 'help-request' | 'alert' | 'message' | 'task-update'
+
+interface Notification {
+  id: string
+  type: NotificationType
+  title: string
+  message: string
+  timestamp: string
+  sender: string
+  status: 'unread' | 'read'
+}
+
+const initialNotifications: Notification[] = [
   {
     id: 'notif-1',
     type: 'help-request',
@@ -13,7 +27,7 @@ const mockNotifications = [
     message: 'Battery low, need assistance at Zone Alpha South',
     timestamp: '5 min ago',
     sender: 'Sarah Lee',
-    status: 'unread' as const,
+    status: 'unread',
   },
   {
     id: 'notif-2',
@@ -22,7 +36,7 @@ const mockNotifications = [
     message: 'Member left assigned zone boundary',
     timestamp: '12 min ago',
     sender: 'System',
-    status: 'read' as const,
+    status: 'unread',
   },
   {
     id: 'notif-3',
@@ -31,7 +45,7 @@ const mockNotifications = [
     message: 'Good progress today, keep up the coverage',
     timestamp: '1 hour ago',
     sender: 'Supervisor',
-    status: 'read' as const,
+    status: 'read',
   },
   {
     id: 'notif-4',
@@ -40,19 +54,43 @@ const mockNotifications = [
     message: 'Jane Smith completed Zone Alpha survey',
     timestamp: '2 hours ago',
     sender: 'Jane Smith',
-    status: 'read' as const,
+    status: 'read',
+  },
+  {
+    id: 'notif-5',
+    type: 'help-request',
+    title: 'Help Request from Mike Johnson',
+    message: 'Cannot locate household #23, need GPS confirmation',
+    timestamp: '3 hours ago',
+    sender: 'Mike Johnson',
+    status: 'read',
   },
 ]
 
-export default function NotificationsPage() {
-  const unreadCount = mockNotifications.filter(n => n.status === 'unread').length
+const typeConfig: Record<NotificationType, { icon: React.ElementType; color: string; bgColor: string }> = {
+  'help-request': { icon: HelpCircle, color: 'border-l-orange-500', bgColor: 'bg-orange-500/10' },
+  alert: { icon: AlertTriangle, color: 'border-l-destructive', bgColor: 'bg-destructive/10' },
+  message: { icon: MessageCircle, color: 'border-l-primary', bgColor: 'bg-primary/10' },
+  'task-update': { icon: CheckCircle, color: 'border-l-emerald-500', bgColor: 'bg-emerald-500/10' },
+}
 
-  const typeConfig = {
-    'help-request': { icon: HelpCircle, color: 'bg-orange-500' },
-    alert: { icon: AlertTriangle, color: 'bg-destructive' },
-    message: { icon: MessageCircle, color: 'bg-primary' },
-    'task-update': { icon: CheckCircle, color: 'bg-emerald-500' },
-  } as const
+export default function NotificationsPage() {
+  const [notifications, setNotifications] = useState(initialNotifications)
+  const [activeFilter, setActiveFilter] = useState<'all' | NotificationType>('all')
+
+  const unreadCount = notifications.filter(n => n.status === 'unread').length
+
+  function markAllRead() {
+    setNotifications(prev => prev.map(n => ({ ...n, status: 'read' as const })))
+  }
+
+  function markRead(id: string) {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, status: 'read' as const } : n))
+  }
+
+  const filtered = activeFilter === 'all'
+    ? notifications
+    : notifications.filter(n => n.type === activeFilter)
 
   return (
     <div className="p-6 space-y-6">
@@ -62,53 +100,84 @@ export default function NotificationsPage() {
           <p className="text-muted-foreground">Help requests, alerts, and messages</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="destructive" className="flex items-center gap-1">
-            <Bell className="h-3 w-3" />
-            {unreadCount} New
-          </Badge>
-          <Button variant="outline" size="sm">
+          {unreadCount > 0 && (
+            <Badge variant="destructive" className="flex items-center gap-1">
+              <Bell className="h-3 w-3" />
+              {unreadCount} New
+            </Badge>
+          )}
+          <Button variant="outline" size="sm" onClick={markAllRead} disabled={unreadCount === 0}>
             Mark All Read
           </Button>
         </div>
       </div>
 
-      <Card className="flex flex-col h-[600px]">
+      {/* Filter buttons */}
+      <div className="flex gap-2 flex-wrap">
+        {([
+          { key: 'all', label: 'All', icon: Bell },
+          { key: 'help-request', label: 'Help Requests', icon: HelpCircle },
+          { key: 'alert', label: 'Alerts', icon: AlertTriangle },
+          { key: 'message', label: 'Messages', icon: MessageCircle },
+          { key: 'task-update', label: 'Task Updates', icon: CheckCircle },
+        ] as const).map(f => (
+          <Button
+            key={f.key}
+            variant={activeFilter === f.key ? 'default' : 'outline'}
+            size="sm"
+            className="flex items-center gap-1"
+            onClick={() => setActiveFilter(f.key)}
+          >
+            <f.icon className="h-3 w-3" />
+            {f.label}
+          </Button>
+        ))}
+      </div>
+
+      <Card className="flex flex-col h-[550px]">
         <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-lg">Live Feed</CardTitle>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" className="h-8 px-2">
-              <HelpCircle className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm" className="h-8 px-2">
-              <AlertTriangle className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm" className="h-8 px-2">
-              <MessageCircle className="h-4 w-4" />
-            </Button>
-          </div>
+          <CardTitle className="text-lg">
+            Live Feed
+            {filtered.length !== notifications.length && (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">({filtered.length} shown)</span>
+            )}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 p-0">
+        <CardContent className="flex-1 p-0 overflow-hidden">
           <ScrollArea className="h-full">
-            <div className="space-y-4 p-6 border-t">
-              {mockNotifications.map((notification) => {
-                const Icon = (typeConfig as any)[notification.type].icon
-                const color = (typeConfig as any)[notification.type].color
+            <div className="space-y-3 p-6 pt-0 border-t">
+              {filtered.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Bell className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p>No notifications in this category</p>
+                </div>
+              )}
+              {filtered.map((notification) => {
+                const config = typeConfig[notification.type]
+                const Icon = config.icon
                 return (
-                  <Card key={notification.id} className={cn(
-                    "hover:shadow-md transition-all cursor-pointer border-l-4 p-4",
-                    notification.status === 'unread' ? 'bg-accent/50 border-l-primary' : 'hover:bg-accent/30',
-                    `border-l-${color}`
-                  )}>
+                  <Card
+                    key={notification.id}
+                    className={cn(
+                      'hover:shadow-md transition-all cursor-pointer border-l-4 p-4',
+                      notification.status === 'unread' ? 'bg-accent/50' : 'hover:bg-accent/30',
+                      config.color
+                    )}
+                    onClick={() => markRead(notification.id)}
+                  >
                     <div className="flex items-start gap-4">
                       <div className="flex-shrink-0 pt-0.5">
-                        <div className={`w-12 h-12 rounded-lg ${color}/10 flex items-center justify-center`}>
-                          <Icon className="h-6 w-6 text-current" />
+                        <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', config.bgColor)}>
+                          <Icon className="h-5 w-5" />
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between mb-1">
                           <h4 className="font-semibold text-sm truncate">{notification.title}</h4>
-                          <Badge variant={notification.status === 'unread' ? "destructive" : "secondary"} className="text-xs ml-2 flex-shrink-0">
+                          <Badge
+                            variant={notification.status === 'unread' ? 'destructive' : 'secondary'}
+                            className="text-xs ml-2 flex-shrink-0"
+                          >
                             {notification.status === 'unread' ? 'NEW' : 'READ'}
                           </Badge>
                         </div>
@@ -137,7 +206,9 @@ export default function NotificationsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-2xl">8</CardTitle>
+            <CardTitle className="text-2xl text-orange-500">
+              {notifications.filter(n => n.type === 'help-request').length}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wide">Help Requests</p>
@@ -145,7 +216,9 @@ export default function NotificationsPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-2xl text-destructive">3</CardTitle>
+            <CardTitle className="text-2xl text-destructive">
+              {notifications.filter(n => n.type === 'alert').length}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-destructive uppercase font-semibold tracking-wide">Alerts</p>
@@ -153,7 +226,9 @@ export default function NotificationsPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-2xl">15</CardTitle>
+            <CardTitle className="text-2xl">
+              {notifications.filter(n => n.type === 'message').length}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wide">Messages</p>
@@ -163,4 +238,3 @@ export default function NotificationsPage() {
     </div>
   )
 }
-
