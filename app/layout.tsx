@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
+import { AuthProvider } from '@/lib/auth/AuthContext'
+import { AuthErrorBoundary } from '@/components/auth/AuthErrorBoundary'
+import { InactivityWatcher } from '@/components/auth/InactivityWatcher'
 import './globals.css'
 
 const geistSans = Geist({ 
@@ -59,7 +62,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <AuthProvider>
+            <AuthErrorBoundary>
+              <InactivityWatcher />
+              {children}
+            </AuthErrorBoundary>
+          </AuthProvider>
         </ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
