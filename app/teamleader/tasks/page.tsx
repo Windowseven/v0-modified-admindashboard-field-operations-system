@@ -10,7 +10,18 @@ import { cn } from '@/lib/utils'
 import { mockTeamMembers as teamMembers } from '@/lib/mock-teamleader'
 import { ListTodo, Calendar, User, Clock, CheckCircle2, AlertCircle, Plus, UserPlus } from 'lucide-react'
 
-const mockTasksData = [
+type Task = {
+  id: string;
+  title: string;
+  description: string;
+  assignedTo: string[];
+  status: 'pending' | 'in-progress' | 'completed';
+  priority: 'high' | 'medium' | 'low';
+  dueDate: string;
+  progress: number;
+};
+
+const mockTasksData: Task[] = [
   {
     id: 'task-1',
     title: 'Zone Alpha North - Household Survey',

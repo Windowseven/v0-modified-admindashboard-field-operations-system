@@ -23,7 +23,6 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { tokenManager, activityTracker } from "@/lib/auth/tokenManager";
 import { authApi, AuthApiError } from "@/lib/auth/authApi";
 import type {
-  LoginCredentials,
   RegisterPayload,
   VerifyOtpPayload,
   ResendOtpPayload,

@@ -6,11 +6,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
-    ignoreBuildErrors: true,
+    // !! WARN !!
+    // Next.js will now fail the build if there are type errors.
   },
   outputFileTracingRoot: __dirname,
   images: {
     unoptimized: true,
+    qualities: [75, 90],
   },
 }
 
