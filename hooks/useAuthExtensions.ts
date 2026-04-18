@@ -1,19 +1,54 @@
 "use client";
 
 // ============================================================
-// FieldSync – useAuth Extensions
-// Specialized hooks built on top of the core AuthContext
+// FieldSync – useAuth Extensions (COMPLETE REPLACEMENT)
+// FILE: hooks/useAuthExtensions.ts
+//
+// Specialised hooks built on top of AuthContext + authApi:
+//   - useLogin          (rate-limiting, lockout countdown)
+//   - useLogout         (optional confirmation)
+//   - useRegister       (NEW – registration flow)
+//   - useVerifyOtp      (NEW – OTP verification)
+//   - useResendOtp      (NEW – resend with attempt tracking)
+//   - useForgotPassword (NEW – password reset request)
+//   - useResetPassword  (NEW – set new password)
+//   - useCurrentUser    (typed user access)
+//   - useTokenExpiry    (live expiry tracking)
+//   - useActivityTracker (activity heartbeat)
+//   - useAuthRedirect   (reason from URL param)
 // ============================================================
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { tokenManager, activityTracker } from "@/lib/auth/tokenManager";
-import type { LoginCredentials } from "@/types/auth.types";
+import { authApi, AuthApiError } from "@/lib/auth/authApi";
+import type {
+  LoginCredentials,
+  RegisterPayload,
+  VerifyOtpPayload,
+  ResendOtpPayload,
+  ForgotPasswordPayload,
+  ResetPasswordPayload,
+} from "@/lib/auth/authApi";
+import type { LoginCredentials as AuthLoginCredentials } from "@/types/auth.types";
 import { SESSION_CONFIG } from "@/types/auth.types";
 
-// ─── useLogin – with rate limiting and loading states ────────
+// ─────────────────────────────────────────────────────────────
+// Re-export types so pages can import from one place
+// ─────────────────────────────────────────────────────────────
+export type {
+  RegisterPayload,
+  VerifyOtpPayload,
+  ResendOtpPayload,
+  ForgotPasswordPayload,
+  ResetPasswordPayload,
+};
+
+// ─────────────────────────────────────────────────────────────
+// useLogin — with rate-limiting + countdown lockout
+// ─────────────────────────────────────────────────────────────
 interface UseLoginReturn {
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (credentials: AuthLoginCredentials) => Promise<void>;
   isLoading: boolean;
   error: string | null;
   clearError: () => void;
@@ -34,7 +69,6 @@ export function useLogin(): UseLoginReturn {
   // Lockout countdown
   useEffect(() => {
     if (!lockedUntil) return;
-
     const interval = setInterval(() => {
       const remaining = Math.ceil((lockedUntil - Date.now()) / 1000);
       if (remaining <= 0) {
@@ -45,21 +79,18 @@ export function useLogin(): UseLoginReturn {
         setLockoutRemaining(remaining);
       }
     }, 1000);
-
     return () => clearInterval(interval);
   }, [lockedUntil]);
 
   const handleLogin = useCallback(
-    async (credentials: LoginCredentials) => {
+    async (credentials: AuthLoginCredentials) => {
       if (lockedUntil && Date.now() < lockedUntil) return;
-
       try {
         await login(credentials);
-        setAttempts(0); // Reset on success
+        setAttempts(0);
       } catch {
         const newAttempts = attempts + 1;
         setAttempts(newAttempts);
-
         if (newAttempts >= MAX_ATTEMPTS) {
           setLockedUntil(Date.now() + LOCKOUT_DURATION_MS);
         }
@@ -79,7 +110,9 @@ export function useLogin(): UseLoginReturn {
   };
 }
 
-// ─── useLogout – logout with optional confirmation ───────────
+// ─────────────────────────────────────────────────────────────
+// useLogout — optional confirmation dialog support
+// ─────────────────────────────────────────────────────────────
 interface UseLogoutReturn {
   logout: () => void;
   confirmLogout: () => void;
@@ -104,9 +137,7 @@ export function useLogout(requireConfirmation = false): UseLogoutReturn {
     logout("manual");
   }, [logout]);
 
-  const cancelLogout = useCallback(() => {
-    setIsPending(false);
-  }, []);
+  const cancelLogout = useCallback(() => setIsPending(false), []);
 
   return {
     logout: handleLogout,
@@ -116,13 +147,235 @@ export function useLogout(requireConfirmation = false): UseLogoutReturn {
   };
 }
 
-// ─── useCurrentUser – typed user access ──────────────────────
+// ─────────────────────────────────────────────────────────────
+// useRegister — create new account, routes to OTP on success
+// ─────────────────────────────────────────────────────────────
+interface UseRegisterReturn {
+  register: (payload: RegisterPayload) => Promise<{ success: boolean } | null>;
+  isLoading: boolean;
+  error: string | null;
+  clearError: () => void;
+}
+
+export function useRegister(): UseRegisterReturn {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const register = useCallback(
+    async (payload: RegisterPayload): Promise<{ success: boolean } | null> => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        await authApi.register(payload);
+        return { success: true };
+      } catch (err) {
+        const msg =
+          err instanceof AuthApiError
+            ? err.message
+            : "Registration failed. Please try again.";
+        setError(msg);
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  return {
+    register,
+    isLoading,
+    error,
+    clearError: () => setError(null),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// useVerifyOtp — verify the 6-digit code
+// ─────────────────────────────────────────────────────────────
+interface VerifyResult {
+  success: boolean;
+  resetToken?: string; // only for password_reset context
+}
+
+interface UseVerifyOtpReturn {
+  verify: (payload: VerifyOtpPayload) => Promise<VerifyResult | null>;
+  isLoading: boolean;
+  error: string | null;
+  clearError: () => void;
+}
+
+export function useVerifyOtp(): UseVerifyOtpReturn {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const verify = useCallback(
+    async (payload: VerifyOtpPayload): Promise<VerifyResult | null> => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const res = await authApi.verifyOtp(payload);
+        return { success: true, resetToken: res.resetToken };
+      } catch (err) {
+        const msg =
+          err instanceof AuthApiError
+            ? err.message
+            : "Verification failed. Please check the code and try again.";
+        setError(msg);
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  return {
+    verify,
+    isLoading,
+    error,
+    clearError: () => setError(null),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// useResendOtp — resend code (backend rate-limits; we track UI state)
+// ─────────────────────────────────────────────────────────────
+interface UseResendOtpReturn {
+  resend: (payload: ResendOtpPayload) => Promise<boolean>;
+  isResending: boolean;
+  resendError: string | null;
+}
+
+export function useResendOtp(): UseResendOtpReturn {
+  const [isResending, setIsResending] = useState(false);
+  const [resendError, setResendError] = useState<string | null>(null);
+
+  const resend = useCallback(async (payload: ResendOtpPayload): Promise<boolean> => {
+    setIsResending(true);
+    setResendError(null);
+
+    try {
+      await authApi.resendOtp(payload);
+      return true;
+    } catch (err) {
+      const msg =
+        err instanceof AuthApiError
+          ? err.message
+          : "Could not resend code. Please try again.";
+      setResendError(msg);
+      return false;
+    } finally {
+      setIsResending(false);
+    }
+  }, []);
+
+  return { resend, isResending, resendError };
+}
+
+// ─────────────────────────────────────────────────────────────
+// useForgotPassword — request password reset OTP
+// ─────────────────────────────────────────────────────────────
+interface UseForgotPasswordReturn {
+  requestReset: (payload: ForgotPasswordPayload) => Promise<boolean>;
+  isLoading: boolean;
+  error: string | null;
+  clearError: () => void;
+}
+
+export function useForgotPassword(): UseForgotPasswordReturn {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const requestReset = useCallback(
+    async (payload: ForgotPasswordPayload): Promise<boolean> => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        await authApi.forgotPassword(payload);
+        // Always treat as success (no email enumeration to the UI)
+        return true;
+      } catch (err) {
+        // Only expose a generic error — never "email not found"
+        const msg =
+          err instanceof AuthApiError && err.status !== 404
+            ? err.message
+            : "An error occurred. Please try again later.";
+        setError(msg);
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  return {
+    requestReset,
+    isLoading,
+    error,
+    clearError: () => setError(null),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// useResetPassword — set new password with OTP/token
+// ─────────────────────────────────────────────────────────────
+interface UseResetPasswordReturn {
+  reset: (payload: ResetPasswordPayload) => Promise<{ success: boolean } | null>;
+  isLoading: boolean;
+  error: string | null;
+  clearError: () => void;
+}
+
+export function useResetPassword(): UseResetPasswordReturn {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const reset = useCallback(
+    async (payload: ResetPasswordPayload): Promise<{ success: boolean } | null> => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        await authApi.resetPassword(payload);
+        return { success: true };
+      } catch (err) {
+        const msg =
+          err instanceof AuthApiError
+            ? err.message
+            : "Password reset failed. Please request a new code.";
+        setError(msg);
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  return {
+    reset,
+    isLoading,
+    error,
+    clearError: () => setError(null),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// useCurrentUser — typed user access
+// ─────────────────────────────────────────────────────────────
 export function useCurrentUser() {
   const { user, isAuthenticated, isLoading } = useAuth();
   return { user, isAuthenticated, isLoading };
 }
 
-// ─── useTokenExpiry – tracks token expiry in real-time ───────
+// ─────────────────────────────────────────────────────────────
+// useTokenExpiry — live expiry tracking
+// ─────────────────────────────────────────────────────────────
 export function useTokenExpiry() {
   const { token, sessionExpiry } = useAuth();
   const [msRemaining, setMsRemaining] = useState<number>(0);
@@ -132,14 +385,12 @@ export function useTokenExpiry() {
       setMsRemaining(0);
       return;
     }
-
     const update = () => {
       const remaining = tokenManager.getTimeToExpiry(token);
       setMsRemaining(remaining);
     };
-
     update();
-    const interval = setInterval(update, 5000); // update every 5s
+    const interval = setInterval(update, 5000);
     return () => clearInterval(interval);
   }, [token]);
 
@@ -149,20 +400,19 @@ export function useTokenExpiry() {
   return { msRemaining, isNearExpiry, isExpired, sessionExpiry };
 }
 
-// ─── useActivityTracker – updates last-activity timestamp ────
-// Mount this once in a high-level layout to track user activity
+// ─────────────────────────────────────────────────────────────
+// useActivityTracker — updates last-activity timestamp
+// Mount once in a high-level authenticated layout
+// ─────────────────────────────────────────────────────────────
 export function useActivityTracker(enabled = true) {
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     if (!enabled || !isAuthenticated) return;
-
     const update = () => activityTracker.updateLastActivity();
-
     SESSION_CONFIG.ACTIVITY_EVENTS.forEach((event) => {
       window.addEventListener(event, update, { passive: true });
     });
-
     return () => {
       SESSION_CONFIG.ACTIVITY_EVENTS.forEach((event) => {
         window.removeEventListener(event, update);
@@ -171,29 +421,30 @@ export function useActivityTracker(enabled = true) {
   }, [enabled, isAuthenticated]);
 }
 
-// ─── useAuthRedirect – listen for auth-related redirects ─────
-// Extracts "reason" from URL query param and returns human-readable message
+// ─────────────────────────────────────────────────────────────
+// useAuthRedirect — extract + display redirect reason from URL
+// ─────────────────────────────────────────────────────────────
+const REDIRECT_MESSAGES: Record<string, string> = {
+  unauthenticated: "Please log in to continue.",
+  token_expired: "Your session has expired. Please log in again.",
+  inactivity: "You were logged out due to inactivity.",
+  no_refresh_token: "Your session is invalid. Please log in again.",
+  manual: "",
+  cross_tab: "You were logged out from another tab.",
+  session_expired: "Your session has expired. Please log in again.",
+  verified: "Account verified successfully. Please sign in.",
+  password_reset: "Password reset successfully. Please sign in with your new password.",
+};
+
 export function useAuthRedirect(): string | null {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-
     const params = new URLSearchParams(window.location.search);
     const reason = params.get("reason");
-
-    const messages: Record<string, string> = {
-      unauthenticated: "Please log in to continue.",
-      token_expired: "Your session has expired. Please log in again.",
-      inactivity: "You were logged out due to inactivity.",
-      no_refresh_token: "Your session is invalid. Please log in again.",
-      manual: "",
-      cross_tab: "You were logged out from another tab.",
-      session_expired: "Your session has expired. Please log in again.",
-    };
-
-    if (reason && messages[reason] !== undefined) {
-      setMessage(messages[reason] || null);
+    if (reason && REDIRECT_MESSAGES[reason] !== undefined) {
+      setMessage(REDIRECT_MESSAGES[reason] || null);
     }
   }, []);
 

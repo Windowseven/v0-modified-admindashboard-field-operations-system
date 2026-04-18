@@ -33,7 +33,7 @@ const initialState: AuthState = {
   token: null,
   refreshToken: null,
   isAuthenticated: false,
-  isLoading: true,    // true on boot while we hydrate from storage
+  isLoading: true,
   isRefreshing: false,
   error: null,
   sessionExpiry: null,
@@ -69,7 +69,8 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
     case "AUTH_LOGOUT":
       return {
         ...initialState,
-        isLoading: false,
+        isLoading: false, // Override initialState's true
+        isAuthenticated: false,
       };
 
     case "TOKEN_REFRESHING":
@@ -81,6 +82,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         token: action.payload.token,
         sessionExpiry: action.payload.sessionExpiry,
         isRefreshing: false,
+        isLoading: false,
       };
 
     case "CLEAR_ERROR":
@@ -106,7 +108,7 @@ interface AuthContextValue extends AuthState {
   clearError: () => void;
   updateUser: (updates: Partial<AuthUser>) => void;
 
-  // Permission helpers (convenience — avoid calling permissions.ts directly)
+  // Permission helpers
   can: (permission: Permission) => boolean;
   canAny: (permissions: Permission[]) => boolean;
   canAll: (permissions: Permission[]) => boolean;
@@ -123,13 +125,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ─── Logout ─────────────────────────────────────────────────
   const logout = useCallback(
     (reason = "manual") => {
+      console.log("[Auth] Logout triggered, reason:", reason);
       sessionManager.stop();
       sessionManager.broadcastLogout();
       tokenManager.clearAll();
 
       dispatch({ type: "AUTH_LOGOUT" });
-
-      // Always send to login on logout
       router.push(`/login?reason=${reason}`);
     },
     [router]
@@ -139,10 +140,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshSession = useCallback(async () => {
     const refreshToken = tokenManager.getRefreshToken();
     if (!refreshToken) {
+      console.warn("[Auth] No refresh token available for refresh");
       logout("no_refresh_token");
       return;
     }
 
+    console.log("[Auth] Attempting token refresh...");
     dispatch({ type: "TOKEN_REFRESHING" });
 
     try {
@@ -160,14 +163,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       tokenManager.setToken(data.token, sessionManager.isRememberMeEnabled());
       tokenManager.setExpiry(newExpiry);
 
+      console.log("[Auth] Token refreshed successfully");
       dispatch({
         type: "TOKEN_REFRESHED",
         payload: { token: data.token, sessionExpiry: newExpiry },
       });
 
-      // Reschedule next refresh
       sessionManager.scheduleTokenRefresh(refreshSession);
-    } catch {
+    } catch (err) {
+      console.error("[Auth] Refresh failed:", err);
       logout("token_expired");
     }
   }, [logout]);
@@ -188,21 +192,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (!res.ok) {
-          const err = await res.json().catch(() => ({ message: "Invalid credentials" }));
-          // SECURITY: never expose whether email or password was wrong
           throw new Error("Invalid credentials. Please try again.");
         }
 
         const data = await res.json();
         const expiryMs = Date.now() + data.expiresIn * 1000;
 
-        // Persist tokens
         tokenManager.setToken(data.token, credentials.rememberMe);
         tokenManager.setRefreshToken(data.refreshToken);
         tokenManager.setExpiry(expiryMs);
         sessionManager.setRememberMe(credentials.rememberMe ?? false);
 
-        // Store user (non-sensitive fields only)
         try {
           const storage = credentials.rememberMe ? localStorage : sessionStorage;
           storage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user));
@@ -220,7 +220,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           },
         });
 
-        // Role-based redirect
         const dashboard = ROLE_DASHBOARDS[data.user.role as UserRole] ?? "/";
         router.push(dashboard);
       } catch (err) {
@@ -235,53 +234,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ─── Hydrate from storage on mount ───────────────────────────
   useEffect(() => {
-    const hydrate = () => {
-      const token = tokenManager.getToken();
-      const refreshToken = tokenManager.getRefreshToken();
-      const expiry = tokenManager.getExpiry();
+    const hydrate = async () => {
+      console.log("[Auth] Starting hydration...");
+      try {
+        const token = tokenManager.getToken();
+        const refreshToken = tokenManager.getRefreshToken();
+        const expiry = tokenManager.getExpiry();
 
-      if (!token) {
-        dispatch({ type: "AUTH_LOGOUT" });
-        return;
-      }
+        if (!token) {
+          console.log("[Auth] No token found during hydration");
+          dispatch({ type: "AUTH_LOGOUT" });
+          return;
+        }
 
-      if (tokenManager.isTokenExpired(token)) {
-        // Try refresh before giving up
-        if (refreshToken) {
-          refreshSession();
-        } else {
+        if (tokenManager.isTokenExpired(token)) {
+          console.log("[Auth] Token expired, checking refresh token...");
+          if (refreshToken) {
+            await refreshSession();
+          } else {
+            console.warn("[Auth] Token expired and no refresh token found");
+            tokenManager.clearAll();
+            dispatch({ type: "AUTH_LOGOUT" });
+          }
+          return;
+        }
+
+        let user: AuthUser | null = null;
+        try {
+          const stored =
+            localStorage.getItem(STORAGE_KEYS.USER) ??
+            sessionStorage.getItem(STORAGE_KEYS.USER);
+          if (stored) user = JSON.parse(stored);
+        } catch {}
+
+        if (!user) {
+          console.error("[Auth] Token exists but user data is missing");
           tokenManager.clearAll();
           dispatch({ type: "AUTH_LOGOUT" });
+          return;
         }
-        return;
-      }
 
-      // Decode user from token for immediate hydration
-      // (Full user object fetched from storage as backup)
-      let user: AuthUser | null = null;
-      try {
-        const stored =
-          localStorage.getItem(STORAGE_KEYS.USER) ??
-          sessionStorage.getItem(STORAGE_KEYS.USER);
-        if (stored) user = JSON.parse(stored);
-      } catch {}
-
-      if (!user) {
-        // No user data — force re-login
+        console.log("[Auth] Hydration successful for user:", user.email);
+        dispatch({
+          type: "AUTH_SUCCESS",
+          payload: {
+            user,
+            token,
+            refreshToken: refreshToken ?? "",
+            sessionExpiry: expiry ?? Date.now() + 3600 * 1000,
+          },
+        });
+      } catch (err) {
+        console.error("[Auth] Hydration error:", err);
         tokenManager.clearAll();
         dispatch({ type: "AUTH_LOGOUT" });
-        return;
       }
-
-      dispatch({
-        type: "AUTH_SUCCESS",
-        payload: {
-          user,
-          token,
-          refreshToken: refreshToken ?? "",
-          sessionExpiry: expiry ?? Date.now() + 3600 * 1000,
-        },
-      });
     };
 
     hydrate();
