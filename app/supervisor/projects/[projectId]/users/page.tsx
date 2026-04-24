@@ -6,7 +6,7 @@ import {
   CheckCircle2, XCircle, Clock, Filter,
   Mail, Phone, UsersRound, ArrowUpDown,
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,60 +25,80 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 
+// Removed duplicate ProjectUser interface
+
+import { projectService } from '@/lib/api/projectService'
+import { useParams } from 'next/navigation'
+import { toast } from '@/components/ui/use-toast'
+
 interface ProjectUser {
   id: string
   name: string
   email: string
   phone: string
-  role: 'team_leader' | 'field_user'
-  team: string
-  status: 'active' | 'offline' | 'idle'
-  verified: boolean
-  joinedAt: string
-  submissions: number
-  lastSeen: string
+  role: 'team_leader' | 'field_agent' | 'supervisor' | 'admin'
+  team_name: string
+  status: 'online' | 'offline' | 'idle'
+  submissions_count: number
+  last_seen: string
 }
 
-const users: ProjectUser[] = [
-  { id: '1', name: 'Sarah Johnson', email: 'sarah.j@survey.co', phone: '+254 712 345 678', role: 'team_leader', team: 'Team Alpha', status: 'active', verified: true, joinedAt: 'Mar 1, 2026', submissions: 87, lastSeen: '2m ago' },
-  { id: '2', name: 'James Kariuki', email: 'james.k@survey.co', phone: '+254 723 456 789', role: 'team_leader', team: 'Team Beta', status: 'active', verified: true, joinedAt: 'Mar 1, 2026', submissions: 72, lastSeen: '5m ago' },
-  { id: '3', name: 'Amara Diallo', email: 'amara.d@survey.co', phone: '+254 734 567 890', role: 'team_leader', team: 'Team Gamma', status: 'idle', verified: true, joinedAt: 'Mar 3, 2026', submissions: 56, lastSeen: '22m ago' },
-  { id: '4', name: 'Kwame Asante', email: 'kwame.a@survey.co', phone: '+254 745 678 901', role: 'field_user', team: 'Team Alpha', status: 'active', verified: true, joinedAt: 'Mar 5, 2026', submissions: 43, lastSeen: '1m ago' },
-  { id: '5', name: 'Fatima Ndiaye', email: 'fatima.n@survey.co', phone: '+254 756 789 012', role: 'field_user', team: 'Team Beta', status: 'offline', verified: true, joinedAt: 'Mar 5, 2026', submissions: 31, lastSeen: '3h ago' },
-  { id: '6', name: 'Chioma Obi', email: 'chioma.o@survey.co', phone: '+254 767 890 123', role: 'team_leader', team: 'Team Delta', status: 'active', verified: true, joinedAt: 'Mar 7, 2026', submissions: 22, lastSeen: '8m ago' },
-  { id: '7', name: 'Tewodros Bekele', email: 'tewodros.b@survey.co', phone: '+254 778 901 234', role: 'field_user', team: 'Team Alpha', status: 'active', verified: true, joinedAt: 'Mar 8, 2026', submissions: 19, lastSeen: '4m ago' },
-  { id: '8', name: 'Ngozi Adeyemi', email: 'ngozi.a@survey.co', phone: '+254 789 012 345', role: 'field_user', team: 'Team Gamma', status: 'offline', verified: false, joinedAt: 'Mar 12, 2026', submissions: 4, lastSeen: '2d ago' },
-  { id: '9', name: 'Mwangi Njoroge', email: 'mwangi.n@survey.co', phone: '+254 790 123 456', role: 'team_leader', team: 'Team Echo', status: 'active', verified: true, joinedAt: 'Mar 2, 2026', submissions: 61, lastSeen: '3m ago' },
-  { id: '10', name: 'Aisha Diop', email: 'aisha.d@survey.co', phone: '+254 701 234 567', role: 'field_user', team: 'Team Echo', status: 'idle', verified: true, joinedAt: 'Mar 9, 2026', submissions: 15, lastSeen: '45m ago' },
-]
-
 const statusConfig = {
-  active: { label: 'Active', className: 'bg-emerald-500/10 text-emerald-500', dot: 'bg-emerald-500' },
+  online: { label: 'Online', className: 'bg-emerald-500/10 text-emerald-500', dot: 'bg-emerald-500' },
+  active: { label: 'Online', className: 'bg-emerald-500/10 text-emerald-500', dot: 'bg-emerald-500' },
   offline: { label: 'Offline', className: 'bg-muted text-muted-foreground', dot: 'bg-muted-foreground' },
   idle: { label: 'Idle', className: 'bg-amber-500/10 text-amber-500', dot: 'bg-amber-500' },
 }
 
 const roleConfig = {
+  admin: { label: 'Admin', className: 'bg-purple-500/10 text-purple-500' },
+  supervisor: { label: 'Supervisor', className: 'bg-blue-500/10 text-blue-500' },
   team_leader: { label: 'Team Leader', className: 'bg-primary/10 text-primary' },
-  field_user: { label: 'Field User', className: 'bg-secondary text-secondary-foreground' },
+  field_agent: { label: 'Field Agent', className: 'bg-secondary text-secondary-foreground' },
+  field_user: { label: 'Field Agent', className: 'bg-secondary text-secondary-foreground' },
 }
 
 export default function SupervisorUsersPage() {
+  const params = useParams()
+  const projectId = params.projectId as string
+  const [users, setUsers] = React.useState<ProjectUser[]>([])
+  const [isLoading, setIsLoading] = React.useState(true)
   const [search, setSearch] = React.useState('')
   const [roleFilter, setRoleFilter] = React.useState('all')
   const [statusFilter, setStatusFilter] = React.useState('all')
 
+  React.useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setIsLoading(true)
+        const data = await projectService.getUsers(projectId)
+        setUsers(data)
+      } catch (error) {
+        console.error('Failed to fetch project users:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load project users. Please try again.',
+          variant: 'destructive',
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    if (projectId) fetchUsers()
+  }, [projectId])
+
   const filtered = users.filter(u => {
-    const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase())
+    const matchSearch = String(u.name || '').toLowerCase().includes(search.toLowerCase()) || 
+                       String(u.email || '').toLowerCase().includes(search.toLowerCase())
     const matchRole = roleFilter === 'all' || u.role === roleFilter
     const matchStatus = statusFilter === 'all' || u.status === statusFilter
     return matchSearch && matchRole && matchStatus
   })
 
   const leaders = users.filter(u => u.role === 'team_leader')
-  const fieldUsers = users.filter(u => u.role === 'field_user')
-  const active = users.filter(u => u.status === 'active')
-  const unverified = users.filter(u => !u.verified)
+  const fieldUsers = users.filter(u => u.role === 'field_agent')
+  const active = users.filter(u => u.status === 'online' || u.status === 'idle')
+  const unverified = [] 
 
   return (
     <>
@@ -156,7 +176,7 @@ export default function SupervisorUsersPage() {
             </TabsList>
 
             {(['all', 'leaders', 'field'] as const).map(tab => {
-              const tabUsers = tab === 'all' ? filtered : filtered.filter(u => tab === 'leaders' ? u.role === 'team_leader' : u.role === 'field_user')
+              const tabUsers = tab === 'all' ? filtered : filtered.filter(u => tab === 'leaders' ? u.role === 'team_leader' : u.role === 'field_agent')
               return (
                 <TabsContent key={tab} value={tab}>
                   <Card>
@@ -176,12 +196,12 @@ export default function SupervisorUsersPage() {
                         </TableHeader>
                         <TableBody>
                           {tabUsers.map((user) => (
-                            <TableRow key={user.id}>
+                             <TableRow key={user.id}>
                               <TableCell>
                                 <div className="flex items-center gap-3">
                                   <Avatar className="h-8 w-8">
                                     <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                                      {user.name.split(' ').map(n => n[0]).join('')}
+                                      {(user.name || 'U').split(' ').map(n => n[0]).join('')}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
@@ -191,29 +211,29 @@ export default function SupervisorUsersPage() {
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <Badge variant="secondary" className={roleConfig[user.role].className}>
-                                  {roleConfig[user.role].label}
+                                <Badge variant="secondary" className={roleConfig[user.role]?.className || ''}>
+                                  {roleConfig[user.role]?.label || user.role}
                                 </Badge>
                               </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-1.5 text-sm">
                                   <UsersRound className="h-3.5 w-3.5 text-muted-foreground" />
-                                  {user.team}
+                                  {user.team_name || 'No Team'}
                                 </div>
                               </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-1.5">
-                                  <div className={cn('h-1.5 w-1.5 rounded-full', statusConfig[user.status].dot)} />
-                                  <span className="text-sm">{statusConfig[user.status].label}</span>
+                                  <div className={cn('h-1.5 w-1.5 rounded-full', statusConfig[user.status]?.dot || 'bg-muted')} />
+                                  <span className="text-sm">{statusConfig[user.status]?.label || user.status}</span>
                                 </div>
                               </TableCell>
                               <TableCell>
-                                {user.verified
-                                  ? <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                                  : <Clock className="h-4 w-4 text-amber-500" />}
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                               </TableCell>
-                              <TableCell className="font-mono text-sm">{user.submissions}</TableCell>
-                              <TableCell className="text-sm text-muted-foreground">{user.lastSeen}</TableCell>
+                              <TableCell className="font-mono text-sm">{user.submissions_count}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {user.last_seen ? new Date(user.last_seen).toLocaleDateString() : 'Never'}
+                              </TableCell>
                               <TableCell>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
@@ -228,7 +248,7 @@ export default function SupervisorUsersPage() {
                                     <DropdownMenuItem>
                                       <Phone className="mr-2 h-4 w-4" /> View Contact
                                     </DropdownMenuItem>
-                                    {user.role === 'field_user' && (
+                                    {user.role === 'field_agent' && (
                                       <DropdownMenuItem>
                                         <Shield className="mr-2 h-4 w-4" /> Promote to Leader
                                       </DropdownMenuItem>

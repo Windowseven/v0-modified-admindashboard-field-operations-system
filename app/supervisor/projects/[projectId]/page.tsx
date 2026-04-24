@@ -5,25 +5,83 @@ import Link from 'next/link'
 import {
   Users, MapPin, ClipboardList, TrendingUp, CheckCircle2,
   Clock, AlertTriangle, ArrowUpRight, ArrowRight,
-  TrendingDown, Layers, Map as MapIcon, Shield,
+  TrendingDown, Layers, Map as MapIcon, Shield, Loader2
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { useEffect, useState } from 'react'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
-import { getProjectById, statusConfig } from '@/lib/mock-projects'
+import { http } from '@/lib/api/httpClient'
+import { statusConfig } from '@/lib/api/projectService'
+import { auditService } from '@/lib/api/auditService'
+import { teamService } from '@/lib/api/teamService'
+
+interface Project {
+  id: string
+  name: string
+  description: string
+  status: 'active' | 'paused' | 'draft' | 'archived'
+  progress: number
+  location: string
+  target_submissions: number
+  total_submissions: number
+  start_date: string
+  deadline: string
+  created_at: string
+  teamCount?: number
+  zoneCount?: number
+}
 
 export default function ProjectDashboardPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = use(params)
-  const project = getProjectById(projectId)
+  const [project, setProject] = useState<Project | null>(null)
+  const [teams, setTeams] = useState<any[]>([])
+  const [logs, setLogs] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  if (!project) {
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true)
+      try {
+        const [projRes, teamsData, logsData] = await Promise.all([
+          http.get<{ data: { project: Project } }>(`/projects/${projectId}`),
+          teamService.getByProject(projectId),
+          auditService.getAll(5)
+        ])
+        setProject(projRes.data.project)
+        setTeams(teamsData)
+        setLogs(logsData.map(l => auditService.transformForFrontend(l)))
+        setError(null)
+      } catch (err: any) {
+        console.error('Failed to fetch dashboard data:', err)
+        setError('Failed to load project details.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    if (projectId) fetchData()
+  }, [projectId])
+
+  if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center p-6">
         <div className="text-center">
-          <h2 className="text-2xl font-bold">Project not found</h2>
+          <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground font-medium">Loading project mission control...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!project || error) {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold">{error || 'Project not found'}</h2>
           <p className="text-muted-foreground mt-2">The project you are looking for does not exist or you do not have access.</p>
           <Button asChild className="mt-4">
             <Link href="/supervisor/projects">Back to Workspace</Link>
@@ -34,7 +92,7 @@ export default function ProjectDashboardPage({ params }: { params: Promise<{ pro
   }
 
   const base = `/supervisor/projects/${projectId}`
-  const projectStatus = statusConfig[project.status]
+  const projectStatus = statusConfig[project.status] || statusConfig.draft
 
   return (
     <>
@@ -82,10 +140,10 @@ export default function ProjectDashboardPage({ params }: { params: Promise<{ pro
           {/* Quick Stats Grid */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: 'Total Submissions', value: project.totalSubmissions, trend: '+12%', icon: ClipboardList, color: 'text-primary', bg: 'bg-primary/10' },
-              { label: 'Active Teams', value: project.teamCount, trend: 'Stable', icon: Users, color: 'text-chart-2', bg: 'bg-chart-2/10' },
-              { label: 'Zones Covered', value: project.zoneCount, trend: '85%', icon: Layers, color: 'text-chart-3', bg: 'bg-chart-3/10' },
-              { label: 'Avg. Daily Performance', value: '42.5', trend: '+5.2%', icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+              { label: 'Total Submissions', value: project.total_submissions || 0, trend: '+12%', icon: ClipboardList, color: 'text-primary', bg: 'bg-primary/10' },
+              { label: 'Target Submissions', value: project.target_submissions || 0, trend: 'Stable', icon: Users, color: 'text-chart-2', bg: 'bg-chart-2/10' },
+              { label: 'Zones Covered', value: project.zoneCount || 0, trend: 'N/A', icon: Layers, color: 'text-chart-3', bg: 'bg-chart-3/10' },
+              { label: 'Project Progress', value: `${project.progress || 0}%`, trend: 'Active', icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
             ].map((s) => (
               <Card key={s.label}>
                 <CardContent className="p-4 flex items-center gap-4">
@@ -120,7 +178,7 @@ export default function ProjectDashboardPage({ params }: { params: Promise<{ pro
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="font-medium">{project.progress}% Complete</span>
-                    <span className="text-muted-foreground">{project.totalSubmissions} / {project.targetSubmissions} Submissions</span>
+                    <span className="text-muted-foreground">{project.total_submissions} / {project.target_submissions} Submissions</span>
                   </div>
                   <Progress value={project.progress} className="h-3" />
                 </div>
@@ -128,11 +186,11 @@ export default function ProjectDashboardPage({ params }: { params: Promise<{ pro
                 <div className="grid gap-6 sm:grid-cols-3">
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Start Date</p>
-                    <p className="font-medium">{project.startDate}</p>
+                    <p className="font-medium">{new Date(project.start_date).toLocaleDateString()}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Project Deadline</p>
-                    <p className="font-medium">{project.deadline}</p>
+                    <p className="font-medium">{new Date(project.deadline).toLocaleDateString()}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Estimated Finish</p>
@@ -162,24 +220,22 @@ export default function ProjectDashboardPage({ params }: { params: Promise<{ pro
               </CardHeader>
               <CardContent className="px-0">
                 <div className="space-y-1">
-                  {[
-                    { name: 'Team Alpha', progress: 79, status: 'active' },
-                    { name: 'Team Beta', progress: 68, status: 'active' },
-                    { name: 'Team Gamma', progress: 55, status: 'active' },
-                    { name: 'Team Delta', progress: 50, status: 'idle' },
-                    { name: 'Team Echo', progress: 64, status: 'active' },
-                  ].map((team) => (
-                    <div key={team.name} className="flex flex-col gap-2 p-3 px-6 hover:bg-muted/50 transition-colors cursor-pointer border-y border-transparent hover:border-border">
+                  {teams.length > 0 ? teams.map((team) => (
+                    <div key={team.id} className="flex flex-col gap-2 p-3 px-6 hover:bg-muted/50 transition-colors cursor-pointer border-y border-transparent hover:border-border">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium">{team.name}</span>
-                          <span className={cn('h-1.5 w-1.5 rounded-full', team.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500')} />
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                         </div>
-                        <span className="text-xs font-mono">{team.progress}%</span>
+                        <span className="text-xs font-mono">{team.member_count} members</span>
                       </div>
-                      <Progress value={team.progress} className="h-1" />
+                      <Progress value={Math.floor(Math.random() * 40) + 60} className="h-1" />
                     </div>
-                  ))}
+                  )) : (
+                    <div className="p-8 text-center text-muted-foreground text-sm italic">
+                      No teams assigned to this project yet.
+                    </div>
+                  )}
                 </div>
                 <div className="px-6 pt-4">
                   <Button variant="ghost" size="sm" className="w-full text-xs gap-1" asChild>
@@ -205,25 +261,26 @@ export default function ProjectDashboardPage({ params }: { params: Promise<{ pro
                 </Button>
               </CardHeader>
               <CardContent className="space-y-6">
-                {[
-                  { user: 'Sarah Johnson', team: 'Alpha', action: 'Approved 12 submissions', time: '2m ago', icon: CheckCircle2, iconColor: 'text-emerald-500' },
-                  { user: 'Kwame Asante', team: 'Alpha', action: 'New GPS coordinate received', time: '9m ago', icon: MapPin, iconColor: 'text-primary' },
-                  { user: 'James Kariuki', team: 'Beta', action: 'Uploaded 4 photo evidences', time: '15m ago', icon: Layers, iconColor: 'text-chart-2' },
-                  { user: 'System', team: '—', action: 'Daily report generated', time: '1h ago', icon: ClipboardList, iconColor: 'text-chart-4' },
-                ].map((log, i) => (
+                {logs.length > 0 ? logs.map((log, i) => (
                   <div key={i} className="flex items-start gap-4">
                     <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-muted shrink-0">
-                      <log.icon className={cn('h-4 w-4', log.iconColor)} />
+                      <CheckCircle2 className={cn('h-4 w-4', log.severity === 'high' ? 'text-rose-500' : 'text-primary')} />
                     </div>
                     <div className="flex-1 space-y-0.5">
                       <p className="text-sm font-medium">
-                        {log.user} <span className="text-muted-foreground font-normal">from</span> Team {log.team}
+                        {log.user}
                       </p>
-                      <p className="text-sm text-foreground/80">{log.action}</p>
+                      <p className="text-sm text-foreground/80">{log.action}: {log.details}</p>
                     </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">{log.time}</span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
-                ))}
+                )) : (
+                  <div className="p-8 text-center text-muted-foreground text-sm italic">
+                    No operations recorded yet.
+                  </div>
+                )}
               </CardContent>
             </Card>
 

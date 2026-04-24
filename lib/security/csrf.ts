@@ -65,22 +65,24 @@ export const csrfManager = {
 // ─── Fetch CSRF token from backend on mount ───────────────────
 // Call this once in your app root (e.g. in AuthProvider or layout)
 export async function initializeCsrf(): Promise<void> {
+  const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+  
   try {
-    const res = await fetch("/api/auth/csrf", {
+    const res = await fetch(`${BASE_URL}/auth/csrf`, {
       method: "GET",
       credentials: "include",
     });
 
     if (res.ok) {
-      // Backend may return token in response header or body
-      const token =
-        res.headers.get("X-CSRF-Token") ??
-        (await res.json().then((d) => d.csrfToken).catch(() => null));
+      const data = await res.json().catch(() => null);
+      const token = res.headers.get("X-CSRF-Token") ?? data?.csrfToken;
 
-      if (token) csrfManager.setToken(token);
+      if (token) {
+        csrfManager.setToken(token);
+        console.log("[Security] CSRF Handshake Successful");
+      }
     }
-  } catch {
-    // Non-fatal: CSRF init failure shouldn't break the app
-    // Mutations will just not have CSRF token (backend should handle gracefully)
+  } catch (error) {
+    console.warn("[Security] CSRF Initialization failed. Mutations may be restricted.", error);
   }
 }

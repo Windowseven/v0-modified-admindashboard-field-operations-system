@@ -5,7 +5,7 @@ import {
   Plus, Eye, EyeOff, Pencil, Trash2, MapPin, Users,
   MoreHorizontal, CheckCircle2, Clock, AlertTriangle, Layers,
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -237,3 +237,4 @@ export default function SupervisorZonesPage() {
     </>
   )
 }
+

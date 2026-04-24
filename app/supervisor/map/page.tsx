@@ -6,7 +6,7 @@ import {
   Maximize2, Eye, EyeOff, RefreshCw, ChevronRight, Circle,
   Filter, Clock,
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -15,20 +15,42 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
+import { http } from '@/lib/api/httpClient'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 
-const liveAgents = [
-  { id: 'a1', name: 'Kwame Asante', team: 'Team Alpha', zone: 'Zone A', status: 'active' as const, lastUpdate: '30s ago', lat: -1.286, lng: 36.820, submissions: 43 },
-  { id: 'a2', name: 'Tewodros Bekele', team: 'Team Alpha', zone: 'Zone A', status: 'active' as const, lastUpdate: '1m ago', lat: -1.290, lng: 36.823, submissions: 19 },
-  { id: 'a3', name: 'Amina Sesay', team: 'Team Beta', zone: 'Zone C', status: 'active' as const, lastUpdate: '45s ago', lat: -1.268, lng: 36.807, submissions: 27 },
-  { id: 'a4', name: 'Osei Mensah', team: 'Team Beta', zone: 'Zone C', status: 'idle' as const, lastUpdate: '8m ago', lat: -1.272, lng: 36.811, submissions: 14 },
-  { id: 'a5', name: 'Yvonne Cherono', team: 'Team Gamma', zone: 'Zone E', status: 'active' as const, lastUpdate: '2m ago', lat: -1.300, lng: 36.854, submissions: 22 },
-  { id: 'a6', name: 'Sule Bah', team: 'Team Gamma', zone: 'Zone E', status: 'idle' as const, lastUpdate: '15m ago', lat: -1.305, lng: 36.856, submissions: 18 },
-  { id: 'a7', name: 'Blessing Okeke', team: 'Team Delta', zone: 'Zone F', status: 'active' as const, lastUpdate: '1m ago', lat: -1.220, lng: 36.890, submissions: 9 },
-  { id: 'a8', name: 'Kojo Acheampong', team: 'Team Echo', zone: 'Zone H', status: 'active' as const, lastUpdate: '20s ago', lat: -1.312, lng: 36.793, submissions: 28 },
-]
+type LiveAgentStatus = 'active' | 'idle' | 'offline'
+
+type LiveAgent = {
+  id: string
+  name: string
+  team: string
+  zone: string
+  status: LiveAgentStatus
+  lastUpdate: string
+  lat: number
+  lng: number
+  submissions: number
+}
+
+type LocationsResponse = {
+  status: string
+  data?: {
+    locations?: Array<{
+      user_id: string
+      name?: string
+      email?: string
+      role?: string
+      status?: string
+      updated_at?: string
+      lat?: number | string
+      lng?: number | string
+    }>
+  }
+}
+
+const fallbackAgents: LiveAgent[] = []
 
 const zones = [
   { id: 'zA', name: 'Zone A', color: '#22c55e', team: 'Team Alpha', visible: true },
@@ -39,6 +61,10 @@ const zones = [
 ]
 
 const teamColors: Record<string, string> = {
+  admin: '#22c55e',
+  supervisor: '#3b82f6',
+  team_leader: '#f59e0b',
+  field_agent: '#a855f7',
   'Team Alpha': '#22c55e',
   'Team Beta': '#3b82f6',
   'Team Gamma': '#f59e0b',
@@ -49,7 +75,7 @@ const teamColors: Record<string, string> = {
 const statusDot = { active: 'bg-emerald-500 animate-pulse', idle: 'bg-amber-500', offline: 'bg-muted-foreground' }
 
 // Mock SVG map with agent dots
-function MockMap({ agents, zonesVisible }: { agents: typeof liveAgents; zonesVisible: boolean }) {
+function MockMap({ agents, zonesVisible }: { agents: LiveAgent[]; zonesVisible: boolean }) {
   return (
     <div className="relative w-full h-full bg-[hsl(var(--muted))] rounded-lg overflow-hidden border border-border">
       {/* Grid overlay */}
@@ -100,7 +126,7 @@ function MockMap({ agents, zonesVisible }: { agents: typeof liveAgents; zonesVis
 
       {/* Map labels */}
       <div className="absolute bottom-3 left-3 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
-        Nairobi, Kenya · Mock View
+        Map preview · Google Maps API pending
       </div>
       <div className="absolute top-3 right-3 text-xs text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded flex items-center gap-1">
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -111,10 +137,51 @@ function MockMap({ agents, zonesVisible }: { agents: typeof liveAgents; zonesVis
 }
 
 export default function SupervisorMapPage() {
+  const [liveAgents, setLiveAgents] = React.useState<LiveAgent[]>(fallbackAgents)
   const [zonesVisible, setZonesVisible] = React.useState(true)
   const [teamFilter, setTeamFilter] = React.useState('all')
   const [selectedAgent, setSelectedAgent] = React.useState<string | null>(null)
   const [refreshing, setRefreshing] = React.useState(false)
+
+  const timeAgo = React.useCallback((iso: string) => {
+    const t = new Date(iso).getTime()
+    if (!Number.isFinite(t)) return '—'
+    const diff = Date.now() - t
+    const sec = Math.floor(diff / 1000)
+    if (sec < 60) return `${sec}s ago`
+    const min = Math.floor(sec / 60)
+    if (min < 60) return `${min}m ago`
+    const hr = Math.floor(min / 60)
+    if (hr < 24) return `${hr}h ago`
+    const day = Math.floor(hr / 24)
+    return `${day}d ago`
+  }, [])
+
+  const fetchAgents = React.useCallback(async () => {
+    try {
+      const res = await http.get<LocationsResponse>('/locations')
+      if (res?.status !== 'success') return
+      const rows = res?.data?.locations ?? []
+      const mapped: LiveAgent[] = rows.map((r) => ({
+        id: r.user_id,
+        name: r.name ?? r.email ?? r.user_id,
+        team: r.role ?? 'field_agent',
+        zone: '—',
+        status: r.status === 'online' ? 'active' : r.status === 'idle' ? 'idle' : 'offline',
+        lastUpdate: timeAgo(r.updated_at ?? new Date().toISOString()),
+        lat: Number(r.lat ?? 0),
+        lng: Number(r.lng ?? 0),
+        submissions: 0,
+      }))
+      if (mapped.length > 0) setLiveAgents(mapped)
+    } catch (err) {
+      console.error('Failed to fetch live agents', err)
+    }
+  }, [timeAgo])
+
+  React.useEffect(() => {
+    fetchAgents()
+  }, [fetchAgents])
 
   const filteredAgents = teamFilter === 'all' ? liveAgents : liveAgents.filter(a => a.team === teamFilter)
   const activeCount = liveAgents.filter(a => a.status === 'active').length
@@ -138,9 +205,18 @@ export default function SupervisorMapPage() {
                   Live
                 </Badge>
               </div>
-              <p className="text-muted-foreground">Real-time GPS tracking of all field agents</p>
+              <p className="text-muted-foreground">Live coordinates are available from backend. Google Maps rendering will be added next.</p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000) }} disabled={refreshing}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                setRefreshing(true)
+                await fetchAgents()
+                setTimeout(() => setRefreshing(false), 400)
+              }}
+              disabled={refreshing}
+            >
               <RefreshCw className={cn('h-4 w-4 mr-2', refreshing && 'animate-spin')} /> Refresh
             </Button>
           </div>
@@ -278,3 +354,4 @@ export default function SupervisorMapPage() {
     </>
   )
 }
+

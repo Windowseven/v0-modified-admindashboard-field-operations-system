@@ -5,7 +5,7 @@ import {
   Plus, Eye, EyeOff, Pencil, Trash2, MapPin, Users,
   MoreHorizontal, CheckCircle2, Clock, AlertTriangle, Layers,
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -41,33 +41,45 @@ interface Zone {
   overlap: boolean
 }
 
-const zones: Zone[] = [
-  { id: '1', name: 'Zone A', description: 'Central Business District', color: 'bg-chart-1', colorHex: '#22c55e', team: 'Team Alpha', status: 'active', coverage: 79, area: '4.2 km²', members: 9, visible: true, overlap: false },
-  { id: '2', name: 'Zone B', description: 'Nairobi West', color: 'bg-chart-2', colorHex: '#3b82f6', team: 'Unassigned', status: 'pending', coverage: 0, area: '6.1 km²', members: 0, visible: true, overlap: false },
-  { id: '3', name: 'Zone C', description: 'Westlands', color: 'bg-chart-3', colorHex: '#f59e0b', team: 'Team Beta', status: 'active', coverage: 68, area: '3.8 km²', members: 8, visible: true, overlap: true },
-  { id: '4', name: 'Zone D', description: "Lang'ata", color: 'bg-chart-4', colorHex: '#a855f7', team: 'Unassigned', status: 'pending', coverage: 0, area: '8.3 km²', members: 0, visible: false, overlap: false },
-  { id: '5', name: 'Zone E', description: 'Eastlands', color: 'bg-chart-5', colorHex: '#06b6d4', team: 'Team Gamma', status: 'active', coverage: 55, area: '5.5 km²', members: 7, visible: true, overlap: false },
-  { id: '6', name: 'Zone F', description: 'Kasarani', color: 'bg-chart-1', colorHex: '#22c55e', team: 'Team Delta', status: 'active', coverage: 50, area: '7.2 km²', members: 10, visible: true, overlap: false },
-  { id: '7', name: 'Zone G', description: 'Embakasi', color: 'bg-chart-2', colorHex: '#3b82f6', team: 'Unassigned', status: 'pending', coverage: 0, area: '9.0 km²', members: 0, visible: true, overlap: false },
-  { id: '8', name: 'Zone H', description: 'Kibera', color: 'bg-chart-3', colorHex: '#f59e0b', team: 'Team Echo', status: 'active', coverage: 64, area: '3.1 km²', members: 8, visible: true, overlap: false },
-  { id: '9', name: 'Zone I', description: 'Mathare', color: 'bg-chart-4', colorHex: '#a855f7', team: 'Unassigned', status: 'pending', coverage: 0, area: '2.8 km²', members: 0, visible: false, overlap: false },
-  { id: '10', name: 'Zone J', description: 'Ruaraka', color: 'bg-chart-5', colorHex: '#06b6d4', team: 'Unassigned', status: 'pending', coverage: 0, area: '4.6 km²', members: 0, visible: true, overlap: false },
-  { id: '11', name: 'Zone K', description: 'Makadara', color: 'bg-chart-1', colorHex: '#22c55e', team: 'Unassigned', status: 'pending', coverage: 0, area: '3.3 km²', members: 0, visible: true, overlap: false },
-  { id: '12', name: 'Zone L', description: 'Dagoretti', color: 'bg-chart-2', colorHex: '#3b82f6', team: 'Unassigned', status: 'pending', coverage: 0, area: '5.9 km²', members: 0, visible: true, overlap: false },
-]
-
-const statusConfig = {
-  active: { label: 'Active', icon: CheckCircle2, className: 'bg-emerald-500/10 text-emerald-500' },
-  completed: { label: 'Completed', icon: CheckCircle2, className: 'bg-primary/10 text-primary' },
-  pending: { label: 'Pending', icon: Clock, className: 'bg-muted text-muted-foreground' },
-}
+import { zoneService } from '@/lib/api/zoneService'
+import { useParams } from 'next/navigation'
+import { toast } from '@/components/ui/use-toast'
 
 export default function SupervisorZonesPage() {
-  const [zonesState, setZonesState] = React.useState(zones)
+  const params = useParams()
+  const projectId = params.projectId as string
+  const [zonesState, setZonesState] = React.useState<any[]>([])
+  const [isLoading, setIsLoading] = React.useState(true)
   const [createOpen, setCreateOpen] = React.useState(false)
+
+  React.useEffect(() => {
+    const fetchZones = async () => {
+      try {
+        setIsLoading(true)
+        const data = await zoneService.getByProject(projectId)
+        setZonesState(data.map(zoneService.transformForFrontend))
+      } catch (error) {
+        console.error('Failed to fetch project zones:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load project zones. Please try again.',
+          variant: 'destructive',
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    if (projectId) fetchZones()
+  }, [projectId])
 
   function toggleVisible(id: string) {
     setZonesState(prev => prev.map(z => z.id === id ? { ...z, visible: !z.visible } : z))
+  }
+
+  const statusConfig = {
+    active: { label: 'Active', icon: CheckCircle2, className: 'bg-emerald-500/10 text-emerald-500' },
+    completed: { label: 'Completed', icon: CheckCircle2, className: 'bg-primary/10 text-primary' },
+    pending: { label: 'Pending', icon: Clock, className: 'bg-muted text-muted-foreground' },
   }
 
   const assigned = zonesState.filter(z => z.team !== 'Unassigned')
@@ -142,9 +154,9 @@ export default function SupervisorZonesPage() {
           <div className="grid gap-4 sm:grid-cols-4">
             {[
               { label: 'Total Zones', value: zonesState.length, icon: Layers, color: 'text-primary', bg: 'bg-primary/10' },
-              { label: 'Assigned', value: assigned.length, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-              { label: 'Unassigned', value: pending.length, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-              { label: 'Overlapping', value: overlapping.length, icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10' },
+              { label: 'Assigned', value: zonesState.filter(z => z.team !== 'Unassigned').length, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+              { label: 'Unassigned', value: zonesState.filter(z => z.team === 'Unassigned').length, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+              { label: 'Overlapping', value: zonesState.filter(z => z.overlap).length, icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10' },
             ].map(s => (
               <Card key={s.label}>
                 <CardContent className="p-4 flex items-center gap-3">
@@ -162,8 +174,19 @@ export default function SupervisorZonesPage() {
 
           {/* Zone Grid */}
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {zonesState.map(zone => {
-              const cfg = statusConfig[zone.status]
+            {isLoading ? (
+              <div className="col-span-full py-20 text-center">
+                <Clock className="h-10 w-10 animate-spin text-primary opacity-20 mx-auto mb-4" />
+                <p className="text-muted-foreground font-medium">Tracking geofence zones...</p>
+              </div>
+            ) : zonesState.length === 0 ? (
+              <div className="col-span-full py-20 text-center border-2 border-dashed rounded-xl border-muted">
+                <MapPin className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-base font-semibold">No zones created</h3>
+                <p className="text-sm text-muted-foreground mt-1 text-center">Define field boundaries to start tracking team coverage.</p>
+              </div>
+            ) : zonesState.map(zone => {
+              const cfg = (statusConfig as any)[zone.status] || statusConfig.pending
               const StatusIcon = cfg.icon
               return (
                 <Card key={zone.id} className={cn('transition-opacity', !zone.visible && 'opacity-50')}>

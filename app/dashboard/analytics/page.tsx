@@ -1,60 +1,48 @@
 'use client';
 
+import useSWR from 'swr';
 import { useState } from 'react';
 import {
-  LineChart, Line, BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell,
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Users, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { TrendingUp, Users, CheckCircle2, Clock, Loader2 } from 'lucide-react';
+import { analyticsService, type AdminAnalyticsRange } from '@/lib/api/analyticsService';
 
-const dailyData = [
-  { date: 'Mon', active: 120, completed: 85, pending: 35 },
-  { date: 'Tue', active: 150, completed: 110, pending: 40 },
-  { date: 'Wed', active: 140, completed: 95, pending: 45 },
-  { date: 'Thu', active: 180, completed: 130, pending: 50 },
-  { date: 'Fri', active: 200, completed: 160, pending: 40 },
-  { date: 'Sat', active: 170, completed: 140, pending: 30 },
-  { date: 'Sun', active: 130, completed: 100, pending: 30 },
-];
-
-const zonePerformance = [
-  { zone: 'Zone A', completion: 92, coverage: 98 },
-  { zone: 'Zone B', completion: 87, coverage: 95 },
-  { zone: 'Zone C', completion: 78, coverage: 88 },
-  { zone: 'Zone D', completion: 95, coverage: 99 },
-  { zone: 'Zone E', completion: 82, coverage: 92 },
-];
-
-const taskDistribution = [
-  { name: 'Completed', value: 45, color: '#10b981' },
-  { name: 'In Progress', value: 30, color: '#3b82f6' },
-  { name: 'Pending', value: 20, color: '#f59e0b' },
-  { name: 'Failed', value: 5, color: '#ef4444' },
-];
-
-const teamPerformance = [
-  { team: 'Team Alpha', avg: 92, active: 12 },
-  { team: 'Team Beta', avg: 88, active: 10 },
-  { team: 'Team Gamma', avg: 85, active: 8 },
-  { team: 'Team Delta', avg: 90, active: 11 },
-  { team: 'Team Epsilon', avg: 87, active: 9 },
-];
+const taskDistributionColors: Record<string, string> = {
+  completed: '#10b981',
+  'in-progress': '#3b82f6',
+  pending: '#f59e0b',
+  draft: '#8b5cf6',
+};
 
 export default function AnalyticsPage() {
-  const [timeRange, setTimeRange] = useState('week');
+  const [timeRange, setTimeRange] = useState<AdminAnalyticsRange>('week');
+  const { data, isLoading } = useSWR(
+    ['admin-analytics', timeRange],
+    () => analyticsService.getAdminAnalytics(timeRange)
+  );
+
+  const overview = data?.overview;
+  const dailyData = data?.activitySeries ?? [];
+  const zonePerformance = data?.projectPerformance ?? [];
+  const taskDistribution = (data?.taskDistribution ?? []).map((item) => ({
+    ...item,
+    color: taskDistributionColors[item.name] ?? '#ef4444',
+  }));
+  const teamPerformance = data?.teamPerformance ?? [];
 
   return (
     <div className="space-y-8 p-6 md:p-8">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Analytics & Reports</h1>
-          <p className="mt-2 text-muted-foreground">Real-time insights and performance metrics</p>
+          <p className="mt-2 text-muted-foreground">Live platform analytics based on current backend data</p>
         </div>
-        <Select value={timeRange} onValueChange={setTimeRange}>
+        <Select value={timeRange} onValueChange={(value) => setTimeRange(value as AdminAnalyticsRange)}>
           <SelectTrigger className="w-40">
             <SelectValue />
           </SelectTrigger>
@@ -67,7 +55,13 @@ export default function AnalyticsPage() {
         </Select>
       </div>
 
-      {/* Key Metrics */}
+      {isLoading && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading analytics...
+        </div>
+      )}
+
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="border border-border bg-gradient-to-br from-background to-background/50">
           <CardContent className="pt-6">
@@ -76,9 +70,9 @@ export default function AnalyticsPage() {
                 <p className="text-sm font-medium text-muted-foreground">Task Completion</p>
                 <TrendingUp className="h-4 w-4 text-emerald-500" />
               </div>
-              <div className="text-2xl font-bold text-foreground">87.5%</div>
+              <div className="text-2xl font-bold text-foreground">{overview?.taskCompletionRate ?? 0}%</div>
               <div className="flex items-center gap-1 text-xs text-emerald-600">
-                <span>+2.3% from last week</span>
+                <span>{overview?.completedTasks ?? 0} of {overview?.totalTasks ?? 0} tasks completed</span>
               </div>
             </div>
           </CardContent>
@@ -91,9 +85,9 @@ export default function AnalyticsPage() {
                 <p className="text-sm font-medium text-muted-foreground">Active Users</p>
                 <Users className="h-4 w-4 text-blue-500" />
               </div>
-              <div className="text-2xl font-bold text-foreground">2,847</div>
+              <div className="text-2xl font-bold text-foreground">{overview?.activeUsers ?? 0}</div>
               <div className="flex items-center gap-1 text-xs text-blue-600">
-                <span>+145 this week</span>
+                <span>Currently online across the platform</span>
               </div>
             </div>
           </CardContent>
@@ -106,9 +100,9 @@ export default function AnalyticsPage() {
                 <p className="text-sm font-medium text-muted-foreground">Coverage Rate</p>
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
               </div>
-              <div className="text-2xl font-bold text-foreground">94.2%</div>
+              <div className="text-2xl font-bold text-foreground">{overview?.coverageRate ?? 0}%</div>
               <div className="flex items-center gap-1 text-xs text-green-600">
-                <span>+1.1% from last week</span>
+                <span>Average submission coverage across projects</span>
               </div>
             </div>
           </CardContent>
@@ -121,22 +115,20 @@ export default function AnalyticsPage() {
                 <p className="text-sm font-medium text-muted-foreground">Avg Response Time</p>
                 <Clock className="h-4 w-4 text-amber-500" />
               </div>
-              <div className="text-2xl font-bold text-foreground">3.2m</div>
-              <div className="flex items-center gap-1 text-xs text-red-600">
-                <span>-0.4m from last week</span>
+              <div className="text-2xl font-bold text-foreground">{overview?.avgResponseMinutes ?? 0}m</div>
+              <div className="flex items-center gap-1 text-xs text-amber-600">
+                <span>Average task completion turnaround</span>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Daily Activity Trend */}
         <Card className="border border-border">
           <CardHeader>
-            <CardTitle>Daily Activity Trend</CardTitle>
-            <CardDescription>Task activity over the past week</CardDescription>
+            <CardTitle>Activity Trend</CardTitle>
+            <CardDescription>Active users and submission outcomes in the selected period</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -158,12 +150,12 @@ export default function AnalyticsPage() {
                 <Legend />
                 <Area type="monotone" dataKey="active" stroke="#3b82f6" fillOpacity={1} fill="url(#colorActive)" />
                 <Area type="monotone" dataKey="completed" stroke="#10b981" fillOpacity={1} fill="url(#colorCompleted)" />
+                <Area type="monotone" dataKey="pending" stroke="#f59e0b" fillOpacity={0.15} fill="#f59e0b" />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Task Distribution */}
         <Card className="border border-border">
           <CardHeader>
             <CardTitle>Task Distribution</CardTitle>
@@ -180,7 +172,6 @@ export default function AnalyticsPage() {
                   labelLine={false}
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   outerRadius={80}
-                  fill="#8884d8"
                   dataKey="value"
                 >
                   {taskDistribution.map((entry, index) => (
@@ -192,11 +183,10 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Zone Performance */}
         <Card className="border border-border lg:col-span-2">
           <CardHeader>
-            <CardTitle>Zone Performance Metrics</CardTitle>
-            <CardDescription>Completion and coverage rates by zone</CardDescription>
+            <CardTitle>Project Performance Metrics</CardTitle>
+            <CardDescription>Completion and submission coverage across active projects</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -214,11 +204,10 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      {/* Team Performance Table */}
       <Card className="border border-border">
         <CardHeader>
           <CardTitle>Team Performance Summary</CardTitle>
-          <CardDescription>Average completion rate and active members per team</CardDescription>
+          <CardDescription>Task completion and live staffing across teams</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -238,17 +227,24 @@ export default function AnalyticsPage() {
                     <td className="px-4 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <div className="h-2 w-24 rounded-full bg-background">
-                          <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500" style={{width: `${team.avg}%`}} />
+                          <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500" style={{ width: `${team.avg}%` }} />
                         </div>
                         <span className="text-foreground font-semibold">{team.avg}%</span>
                       </div>
                     </td>
                     <td className="px-4 py-4 text-right text-foreground">{team.active}</td>
                     <td className="px-4 py-4 text-right">
-                      <Badge className="bg-green-500/20 text-green-600 hover:bg-green-500/30">Active</Badge>
+                      <Badge className={team.active > 0 ? 'bg-green-500/20 text-green-600 hover:bg-green-500/30' : 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30'}>
+                        {team.active > 0 ? 'Active' : 'Idle'}
+                      </Badge>
                     </td>
                   </tr>
                 ))}
+                {!isLoading && teamPerformance.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">No team analytics available yet.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

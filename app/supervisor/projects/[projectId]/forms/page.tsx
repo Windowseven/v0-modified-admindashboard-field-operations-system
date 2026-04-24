@@ -8,7 +8,7 @@ import {
   Clock, CheckCircle2, AlertTriangle, Filter,
   TrendingUp, Users,
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -34,28 +34,50 @@ interface ProjectForm {
   creator: string
 }
 
-const forms: ProjectForm[] = [
-  { id: '1', title: 'Household Demographics 2026', description: 'Core survey for collecting household size and income data.', version: 'v2.4', status: 'published', submissions: 420, target: 1000, lastActivity: '2h ago', creator: 'Sarah Johnson' },
-  { id: '2', title: 'Water & Sanitation Audit', description: 'Technical audit of community water points and sanitation facilities.', version: 'v1.1', status: 'published', submissions: 158, target: 500, lastActivity: '5m ago', creator: 'Sarah Johnson' },
-  { id: '3', title: 'Infrastructure Mapping', description: 'Spatial data collection for roads and public utility access.', version: 'v1.0', status: 'draft', submissions: 0, target: 300, lastActivity: '2d ago', creator: 'Admin User' },
-  { id: '4', title: '2025 Pilot Survey', description: 'Legacy pilot data from previous year baseline.', version: 'v1.0', status: 'archived', submissions: 120, target: 120, lastActivity: 'Mar 2026', creator: 'James Kariuki' },
-]
-
-const statusConfig = {
-  published: { label: 'Published', className: 'bg-emerald-500/10 text-emerald-500', dot: 'bg-emerald-500' },
-  draft: { label: 'Draft', className: 'bg-amber-500/10 text-amber-500', dot: 'bg-amber-500' },
-  archived: { label: 'Archived', className: 'bg-muted text-muted-foreground', dot: 'bg-muted-foreground' },
-}
+import { formService } from '@/lib/api/formService'
+import { useParams } from 'next/navigation'
+import { toast } from '@/components/ui/use-toast'
 
 export default function FormsAndTasksPage() {
+  const params = useParams()
+  const projectId = params.projectId as string
+  const [formsData, setFormsData] = React.useState<ProjectForm[]>([])
+  const [isLoading, setIsLoading] = React.useState(true)
   const [search, setSearch] = React.useState('')
   const [activeTab, setActiveTab] = React.useState('published')
 
-  const filteredForms = forms.filter(f => {
-    const matchSearch = f.title.toLowerCase().includes(search.toLowerCase())
+  React.useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        setIsLoading(true)
+        const data = await formService.getByProject(projectId)
+        const transformed = data.map(formService.transformForFrontend) as ProjectForm[]
+        setFormsData(transformed)
+      } catch (error) {
+        console.error('Failed to fetch project forms:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load project forms. Please try again.',
+          variant: 'destructive',
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    if (projectId) fetchForms()
+  }, [projectId])
+
+  const filteredForms = formsData.filter(f => {
+    const matchSearch = String(f.title || '').toLowerCase().includes(search.toLowerCase())
     if (activeTab === 'all') return matchSearch
     return matchSearch && f.status === activeTab
   })
+
+  const statusConfig = {
+    published: { label: 'Published', className: 'bg-emerald-500/10 text-emerald-500', dot: 'bg-emerald-500' },
+    draft: { label: 'Draft', className: 'bg-amber-500/10 text-amber-500', dot: 'bg-amber-500' },
+    archived: { label: 'Archived', className: 'bg-muted text-muted-foreground', dot: 'bg-muted-foreground' },
+  } as const
 
   return (
     <>
@@ -87,9 +109,9 @@ export default function FormsAndTasksPage() {
           {/* Form Stats Bar */}
           <div className="grid gap-4 sm:grid-cols-3">
             {[
-              { label: 'Active Forms', value: forms.filter(f => f.status === 'published').length, icon: FileText, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-              { label: 'Team Assignments', value: '12 active targets', icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
-              { label: 'Pending Submissions', value: '24 awaiting review', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+              { label: 'Active Forms', value: formsData.filter(f => f.status === 'published').length, icon: FileText, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+              { label: 'Team Assignments', value: 'Live Updates', icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
+              { label: 'Total Submissions', value: formsData.reduce((acc, f) => acc + (f.submissions || 0), 0), icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
             ].map((s) => (
               <Card key={s.label}>
                 <CardContent className="p-4 flex items-center gap-3">
@@ -125,7 +147,12 @@ export default function FormsAndTasksPage() {
             </div>
 
             <TabsContent value={activeTab} className="pt-6">
-              {filteredForms.length === 0 ? (
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <Clock className="h-10 w-10 animate-spin text-primary opacity-20 mb-4" />
+                  <p className="text-muted-foreground font-medium">Synchronizing forms from database...</p>
+                </div>
+              ) : filteredForms.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed rounded-xl border-muted">
                   <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
                     <FileText className="h-6 w-6 text-muted-foreground" />
@@ -138,7 +165,9 @@ export default function FormsAndTasksPage() {
               ) : (
                 <div className="grid gap-4 md:grid-cols-2">
                   {filteredForms.map((form) => {
-                    const cfg = statusConfig[form.status]
+                    const statusKey: keyof typeof statusConfig =
+                      form.status in statusConfig ? form.status : 'draft'
+                    const cfg = statusConfig[statusKey]
                     return (
                       <Card key={form.id} className="hover:shadow-md transition-shadow group border-primary/5">
                         <CardHeader className="pb-3 px-6 pt-6">
@@ -148,8 +177,9 @@ export default function FormsAndTasksPage() {
                                 <CardTitle className="text-base leading-tight truncate group-hover:text-primary transition-colors">
                                   {form.title}
                                 </CardTitle>
-                                <Badge variant="secondary" className="text-[10px] h-4 leading-none tracking-tight font-bold bg-muted/60">
-                                  {form.version}
+                                <Badge variant="secondary" className={cfg.className}>
+                                  <span className={cn('h-1.5 w-1.5 rounded-full mr-1.5', cfg.dot)} />
+                                  {cfg.label}
                                 </Badge>
                               </div>
                               <CardDescription className="text-xs line-clamp-1">{form.description}</CardDescription>

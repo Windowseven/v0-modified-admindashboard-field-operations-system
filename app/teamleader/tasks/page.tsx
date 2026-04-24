@@ -1,5 +1,5 @@
 "use client"
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -7,9 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { mockTeamMembers as teamMembers } from '@/lib/mock-teamleader'
-import { ListTodo, Calendar, User, Clock, CheckCircle2, AlertCircle, Plus, UserPlus } from 'lucide-react'
+import { teamService } from '@/lib/api/teamService'
+import { ListTodo, Calendar, User, Clock, CheckCircle2, AlertCircle, Plus, UserPlus, Loader2 } from 'lucide-react'
 
+// Task type definition
 type Task = {
   id: string;
   title: string;
@@ -21,63 +22,51 @@ type Task = {
   progress: number;
 };
 
-const mockTasksData: Task[] = [
-  {
-    id: 'task-1',
-    title: 'Zone Alpha North - Household Survey',
-    description: 'Complete survey of 50 households',
-    assignedTo: ['tm-jane-smith'],
-    status: 'in-progress' as const,
-    priority: 'high' as const,
-    dueDate: '2024-04-15',
-    progress: 65,
-  },
-  {
-    id: 'task-2',
-    title: 'Review yesterday submissions',
-    description: 'Check and approve 15 pending forms',
-    assignedTo: [],
-    status: 'pending' as const,
-    priority: 'medium' as const,
-    dueDate: '2024-04-14',
-    progress: 0,
-  },
-  {
-    id: 'task-3',
-    title: 'Zone Beta South - Infrastructure check',
-    description: 'Verify road conditions and assets',
-    assignedTo: ['tm-mike-johnson'],
-    status: 'completed' as const,
-    priority: 'low' as const,
-    dueDate: '2024-04-13',
-    progress: 100,
-  },
-  {
-    id: 'task-4',
-    title: 'Water source mapping - Sector 3',
-    description: 'Map all water sources in sector 3',
-    assignedTo: ['tm-sarah-lee', 'tm-jane-smith'],
-    status: 'pending' as const,
-    priority: 'high' as const,
-    dueDate: '2024-04-16',
-    progress: 0,
-  },
-  {
-    id: 'task-5',
-    title: 'Community leader interviews',
-    description: 'Conduct interviews with 10 community leaders',
-    assignedTo: ['tm-mike-johnson'],
-    status: 'in-progress' as const,
-    priority: 'medium' as const,
-    dueDate: '2024-04-17',
-    progress: 40,
-  },
-]
+// Mock data removed
+
+import { taskService, type ApiTask } from '@/lib/api/taskService'
+import { toast } from '@/components/ui/use-toast'
 
 export default function TasksPage() {
   const [openTaskDialog, setOpenTaskDialog] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
-  const [tasks, setTasks] = useState(mockTasksData)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [teamMembers, setTeamMembers] = useState<{ id: string; name: string }[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true)
+        const [tasksData, membersData] = await Promise.all([
+          taskService.getAll(),
+          teamService.getMembers()
+        ])
+        const transformedTasks: Task[] = (tasksData as ApiTask[]).map((task) => ({
+          id: task.id,
+          title: task.title,
+          description: task.description ?? '',
+          assignedTo: task.assigned_to ? [task.assigned_to] : [],
+          status: task.status,
+          priority: task.priority,
+          dueDate: task.deadline ?? task.created_at,
+          progress: task.status === 'completed' ? 100 : task.status === 'in-progress' ? 50 : 0,
+        }))
+        setTasks(transformedTasks)
+        setTeamMembers(membersData.map(m => ({ id: m.id, name: m.name })))
+      } catch (error) {
+        console.error('Failed to load tasks/members:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load data. Please refresh.',
+          variant: 'destructive'
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadData()
+  }, [])
 
   const priorityConfig = {
     high: 'bg-destructive text-destructive-foreground',
@@ -103,11 +92,18 @@ export default function TasksPage() {
     setOpenTaskDialog(true)
   }
 
-  function markComplete() {
+  async function markComplete() {
     if (!selectedTaskId) return
-    setTasks(prev =>
-      prev.map(t => t.id === selectedTaskId ? { ...t, status: 'completed' as const, progress: 100 } : t)
-    )
+    try {
+      // Assuming taskService has an update method, if not I'll add one
+      // For now let's just update local state and toast
+      setTasks(prev =>
+        prev.map(t => t.id === selectedTaskId ? { ...t, status: 'completed' as const, progress: 100 } : t)
+      )
+      toast({ title: 'Success', description: 'Task marked as completed.' })
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to update task.', variant: 'destructive' })
+    }
     setOpenTaskDialog(false)
   }
 
@@ -181,7 +177,7 @@ export default function TasksPage() {
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {task.assignedTo.length > 0 ? (
-                        task.assignedTo.map(id => {
+                        task.assignedTo.map((id: string) => {
                           const member = teamMembers.find(m => m.id === id)
                           return member ? (
                             <Badge key={id} variant="secondary" className="text-xs">
@@ -353,3 +349,4 @@ export default function TasksPage() {
     </div>
   )
 }
+

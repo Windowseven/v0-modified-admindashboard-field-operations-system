@@ -1,27 +1,47 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   FileText, Clock, CheckCircle2, Circle, Edit3,
-  ChevronRight, MapPin, AlertCircle,
+  ChevronRight, MapPin, AlertCircle, Loader2,
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
-import { mockUserForms, type FormStatus } from '@/lib/mock-user'
+import { formService, type ApiForm } from '@/lib/api/formService'
 
-const statusConfig: Record<FormStatus, { label: string; color: string; bg: string; borderColor: string }> = {
+const statusConfig: Record<string, { label: string; color: string; bg: string; borderColor: string }> = {
   'not-started': { label: 'Not Started', color: 'text-muted-foreground', bg: 'bg-muted/60', borderColor: '' },
   draft: { label: 'Draft Saved', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10', borderColor: 'border-amber-500/30' },
   submitted: { label: 'Submitted', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10', borderColor: 'border-emerald-500/20' },
 }
 
 export default function UserFormsPage() {
-  const pending = mockUserForms.filter((f) => f.status !== 'submitted')
-  const submitted = mockUserForms.filter((f) => f.status === 'submitted')
+  const [forms, setForms] = useState<ApiForm[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchForms()
+  }, [])
+
+  const fetchForms = async () => {
+    try {
+      setLoading(true)
+      const data = await formService.getAll()
+      setForms(data)
+    } catch (error) {
+      console.error('Failed to fetch forms:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const pending = forms.filter((f) => f.status !== 'published')
+  const submitted = forms.filter((f) => f.status === 'published')
 
   return (
     <>
@@ -42,8 +62,8 @@ export default function UserFormsPage() {
           {/* Summary */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: 'To Do', value: mockUserForms.filter(f => f.status === 'not-started').length, color: 'text-muted-foreground' },
-              { label: 'Drafts', value: mockUserForms.filter(f => f.status === 'draft').length, color: 'text-amber-500' },
+              { label: 'To Do', value: forms.filter(f => f.status === 'draft').length, color: 'text-muted-foreground' },
+              { label: 'Drafts', value: forms.filter(f => f.status === 'draft').length, color: 'text-amber-500' },
               { label: 'Submitted', value: submitted.length, color: 'text-emerald-500' },
             ].map((s) => (
               <Card key={s.label}>
@@ -62,11 +82,11 @@ export default function UserFormsPage() {
                 Pending
               </h2>
               {pending.map((form) => {
-                const sc = statusConfig[form.status]
-                const totalSteps = form.steps.length
-                const draftProgress = form.draftStep > 0 && totalSteps > 0
-                  ? Math.round((form.draftStep / totalSteps) * 100)
-                  : 0
+                const sc = statusConfig[form.status] || statusConfig['not-started']
+                const schema = typeof form.form_schema === 'string' ? JSON.parse(form.form_schema) : form.form_schema
+                const totalSteps = schema?.steps?.length || 1
+                const draftProgress = 0
+
                 return (
                   <Card key={form.id} className={cn('transition-shadow hover:shadow-md', sc.borderColor)}>
                     <CardContent className="p-4 space-y-3">
@@ -82,30 +102,28 @@ export default function UserFormsPage() {
                             </Badge>
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                            {form.description}
+                            {form.description || 'No description'}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" /> {form.zone}
+                          <MapPin className="h-3 w-3" /> Zone TBD
                         </span>
                         <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> Due {form.deadline}
+                          <Clock className="h-3 w-3" /> Due TBD
                         </span>
-                        {totalSteps > 0 && (
-                          <span className="flex items-center gap-1">
-                            <Circle className="h-3 w-3" /> {totalSteps} step{totalSteps !== 1 ? 's' : ''}
-                          </span>
-                        )}
+                        <span className="flex items-center gap-1">
+                          <Circle className="h-3 w-3" /> {totalSteps} step{totalSteps !== 1 ? 's' : ''}
+                        </span>
                       </div>
 
                       {form.status === 'draft' && totalSteps > 0 && (
                         <div>
                           <div className="flex justify-between text-xs mb-1">
                             <span className="text-muted-foreground">Progress</span>
-                            <span className="font-medium">Step {form.draftStep} of {totalSteps}</span>
+                            <span className="font-medium">Step 1 of {totalSteps}</span>
                           </div>
                           <Progress value={draftProgress} className="h-1.5" />
                         </div>
@@ -140,7 +158,7 @@ export default function UserFormsPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold truncate">{form.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          Submitted at {form.submittedAt} · {form.zone}
+                          Submitted
                         </p>
                       </div>
                       <Badge className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-0 shrink-0">
@@ -158,3 +176,4 @@ export default function UserFormsPage() {
     </>
   )
 }
+

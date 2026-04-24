@@ -69,7 +69,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "zones:read",
   ],
 
-  field_worker: [
+  field_agent: [
     "tasks:read",
     "tasks:complete",
     "forms:read",
@@ -166,14 +166,14 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   admin: "System Administrator",
   supervisor: "Supervisor",
   team_leader: "Team Leader",
-  field_worker: "Field Worker",
+  field_agent: "Field Worker",
 };
 
 export const ROLE_COLORS: Record<UserRole, string> = {
   admin: "bg-red-100 text-red-800 border-red-200",
   supervisor: "bg-blue-100 text-blue-800 border-blue-200",
   team_leader: "bg-purple-100 text-purple-800 border-purple-200",
-  field_worker: "bg-green-100 text-green-800 border-green-200",
+  field_agent: "bg-green-100 text-green-800 border-green-200",
 };
 
 // ─── Feature-level permissions (granular UI control) ─────────

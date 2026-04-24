@@ -5,12 +5,16 @@ import {
   Wifi, WifiOff, RefreshCw, CheckCircle2, AlertTriangle,
   Clock, FileText, MapPin, ClipboardList, RotateCcw,
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { mockSyncItems, syncSummary, type SyncStatus } from '@/lib/mock-user'
+import { db } from '@/lib/db/syncDatabase'
+import { syncService } from '@/lib/api/syncService'
+import { useLiveQuery } from 'dexie-react-hooks'
+
+export type SyncStatus = 'synced' | 'pending' | 'failed'
 
 const statusConfig: Record<SyncStatus, { label: string; icon: React.ElementType; color: string; bg: string }> = {
   synced: { label: 'Synced', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
@@ -26,22 +30,21 @@ const typeIcon: Record<string, React.ElementType> = {
 
 export default function UserSyncPage() {
   const [syncing, setSyncing] = useState(false)
-  const [items, setItems] = useState(mockSyncItems)
+  
+  const items = useLiveQuery(() => db.syncQueue.orderBy('timestamp').reverse().toArray()) || []
 
-  const handleSync = () => {
+  const handleSync = async () => {
     setSyncing(true)
-    setTimeout(() => {
-      setItems((prev) =>
-        prev.map((item) => (item.status === 'pending' ? { ...item, status: 'synced' as SyncStatus } : item))
-      )
-      setSyncing(false)
-    }, 2200)
+    try {
+      await syncService.processQueue()
+    } finally {
+      setTimeout(() => setSyncing(false), 800) // Small delay for visual feedback
+    }
   }
 
-  const handleRetry = (id: string) => {
-    setItems((prev) =>
-      prev.map((item) => item.id === id ? { ...item, status: 'synced' as SyncStatus, retries: 0 } : item)
-    )
+  const handleRetry = async (id: string) => {
+    await db.syncQueue.update(id, { status: 'pending' })
+    handleSync()
   }
 
   const currentSummary = {
@@ -160,7 +163,7 @@ export default function UserSyncPage() {
                           size="icon"
                           variant="ghost"
                           className="h-7 w-7"
-                          onClick={() => handleRetry(item.id)}
+                          onClick={() => handleRetry(item.id!)}
                         >
                           <RotateCcw className="h-3.5 w-3.5" />
                         </Button>
@@ -181,3 +184,4 @@ export default function UserSyncPage() {
     </>
   )
 }
+

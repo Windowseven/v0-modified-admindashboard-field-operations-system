@@ -6,7 +6,7 @@ import {
   TrendingUp, UserPlus, Trash2, Settings, UserMinus,
   UsersRound, CheckCircle2,
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -292,3 +292,4 @@ export default function SupervisorTeamsPage() {
     </>
   )
 }
+

@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { History, Search, Download, Filter, CheckCircle2, AlertTriangle, XCircle, Shield, User, Settings, FileText, LogIn, LogOut, Trash2, Eye } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useEffect, useMemo, useState } from 'react'
+import useSWR from 'swr'
+import { History, Search, Download, CheckCircle2, AlertTriangle, XCircle, Shield, User, Settings, FileText, LogIn, Trash2, Eye } from 'lucide-react'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,24 +12,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
+import { fieldSyncSocket } from '@/lib/auth/socketManager'
+import { auditService, type ApiAuditLog, type FrontendAuditLog } from '@/lib/api/auditService'
 
-const allLogs = [
-  { id: 'log-001', time: '14:32:01', user: 'grace.wanjiku', role: 'Supervisor', action: 'project.create', target: 'Nairobi Campaign v2', ip: '41.80.244.12', severity: 'info' },
-  { id: 'log-002', time: '14:28:45', user: 'system', role: 'System', action: 'rate_limit.block', target: '192.168.45.231', ip: 'internal', severity: 'warning' },
-  { id: 'log-003', time: '14:25:12', user: 'james.mwangi', role: 'Field Worker', action: 'submission.create', target: 'Form #47 — Zone A-12', ip: '41.80.100.44', severity: 'info' },
-  { id: 'log-004', time: '14:20:08', user: 'anon', role: 'Unknown', action: 'auth.login_failed', target: 'ahmed.omar@fieldsync.io', ip: '203.0.113.87', severity: 'error' },
-  { id: 'log-005', time: '14:18:33', user: 'admin', role: 'Admin', action: 'user.suspend', target: 'kwame.asante@fieldsync.io', ip: '196.43.12.8', severity: 'warning' },
-  { id: 'log-006', time: '14:15:00', user: 'ahmed.omar', role: 'Supervisor', action: 'team.create', target: 'Team Bravo — Mombasa', ip: '41.80.211.33', severity: 'info' },
-  { id: 'log-007', time: '14:10:22', user: 'esther.namutebi', role: 'Supervisor', action: 'zone.assign', target: 'Zone 3 → Team Alpha', ip: '41.80.198.77', severity: 'info' },
-  { id: 'log-008', time: '14:05:44', user: 'system', role: 'System', action: 'backup.completed', target: 'backup_2026_04_08.sql', ip: 'internal', severity: 'info' },
-  { id: 'log-009', time: '13:58:11', user: 'anon', role: 'Unknown', action: 'auth.brute_force', target: 'multiple accounts', ip: '198.51.100.22', severity: 'critical' },
-  { id: 'log-010', time: '13:52:07', user: 'junior.lespikius', role: 'Supervisor', action: 'form.publish', target: 'Household Survey v3', ip: '41.80.145.90', severity: 'info' },
-  { id: 'log-011', time: '13:45:30', user: 'admin', role: 'Admin', action: 'project.freeze', target: 'Door-to-Door Lagos', ip: '196.43.12.8', severity: 'warning' },
-  { id: 'log-012', time: '13:40:15', user: 'peter.kamau', role: 'Team Leader', action: 'submission.delete', target: 'Draft #102', ip: '41.80.88.14', severity: 'info' },
-]
-
-const securityLogs = allLogs.filter(l => ['auth.login_failed', 'auth.brute_force', 'rate_limit.block', 'user.suspend'].includes(l.action))
-const adminLogs = allLogs.filter(l => l.user === 'admin')
+interface AuditTableLog {
+  id: string
+  time: string
+  user: string
+  role: string
+  action: string
+  target: string
+  ip: string
+  severity: 'info' | 'warning' | 'critical'
+}
 
 const severityConfig: Record<string, { className: string; icon: React.ElementType }> = {
   info: { className: 'bg-primary/10 text-primary', icon: CheckCircle2 },
@@ -38,6 +34,7 @@ const severityConfig: Record<string, { className: string; icon: React.ElementTyp
 }
 
 const actionIconMap: Record<string, React.ElementType> = {
+  'auth.login': LogIn,
   'auth.login_failed': LogIn,
   'auth.brute_force': Shield,
   'rate_limit.block': Shield,
@@ -52,8 +49,8 @@ const actionIconMap: Record<string, React.ElementType> = {
   'backup.completed': CheckCircle2,
 }
 
-function LogRow({ log }: { log: typeof allLogs[number] }) {
-  const sc = severityConfig[log.severity]
+function LogRow({ log }: { log: AuditTableLog }) {
+  const sc = severityConfig[log.severity] || severityConfig.info
   const ActionIcon = actionIconMap[log.action] ?? Eye
   return (
     <TableRow>
@@ -88,8 +85,51 @@ export default function AuditPage() {
   const [search, setSearch] = useState('')
   const [severity, setSeverity] = useState('all')
 
+  const { data: rawLogs, isLoading, mutate } = useSWR('audit-logs', () => auditService.getAll(500))
+
+  useEffect(() => {
+    const unsubscribe = fieldSyncSocket.on('audit_log', (data) => {
+      const liveLog = data as ApiAuditLog
+      mutate((current) => {
+        const next = Array.isArray(current) ? current : []
+        const deduped = next.filter((item) => item.id?.toString() !== liveLog.id?.toString())
+        return [liveLog, ...deduped].slice(0, 500)
+      }, { revalidate: false })
+    })
+
+    return unsubscribe
+  }, [mutate])
+
+  const allLogs = useMemo<AuditTableLog[]>(() => {
+    if (!rawLogs) return []
+    return rawLogs.map(log => {
+      let severityMapped = 'info'
+      const infer = auditService.inferSeverity(log.action)
+      if (infer === 'medium') severityMapped = 'warning'
+      if (infer === 'high') severityMapped = 'critical'
+
+      const transformed = auditService.transformForFrontend(log)
+
+      return {
+        id: `log-${transformed.id}`,
+        time: new Date(log.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }),
+        user: transformed.user,
+        role: transformed.role,
+        action: log.action,
+        target: transformed.details,
+        ip: transformed.ip,
+        severity: severityMapped
+      }
+    })
+  }, [rawLogs])
+
+  const securityLogs = allLogs.filter(l => ['auth.login_failed', 'auth.brute_force', 'rate_limit.block', 'user.suspend'].includes(l.action))
+  const adminLogs = allLogs.filter(l => l.role === 'admin')
+
   const filtered = allLogs.filter(l => {
-    const matchSearch = l.user.includes(search) || l.action.includes(search) || l.target.toLowerCase().includes(search.toLowerCase())
+    const matchSearch = l.user.toLowerCase().includes(search.toLowerCase()) ||
+                        l.action.toLowerCase().includes(search.toLowerCase()) ||
+                        l.target.toLowerCase().includes(search.toLowerCase())
     const matchSeverity = severity === 'all' || l.severity === severity
     return matchSearch && matchSeverity
   })
@@ -99,7 +139,6 @@ export default function AuditPage() {
       <DashboardHeader title="Audit & Logs" />
       <main className="flex-1 overflow-auto p-4 md:p-6">
         <div className="mx-auto max-w-7xl space-y-6">
-
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Audit & Logs</h1>
@@ -110,13 +149,12 @@ export default function AuditPage() {
             </Button>
           </div>
 
-          {/* KPIs */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: 'Total Events (24h)', value: '8,421', color: 'text-primary', bg: 'bg-primary/10', icon: History },
-              { label: 'Warnings', value: '34', color: 'text-amber-500', bg: 'bg-amber-500/10', icon: AlertTriangle },
-              { label: 'Errors', value: '12', color: 'text-destructive', bg: 'bg-destructive/10', icon: XCircle },
-              { label: 'Critical Events', value: '2', color: 'text-destructive', bg: 'bg-destructive/10', icon: Shield },
+              { label: 'Total Events', value: allLogs.length, color: 'text-primary', bg: 'bg-primary/10', icon: History },
+              { label: 'Warnings', value: allLogs.filter(l => l.severity === 'warning').length, color: 'text-amber-500', bg: 'bg-amber-500/10', icon: AlertTriangle },
+              { label: 'Errors', value: allLogs.filter(l => l.severity === 'error').length, color: 'text-destructive', bg: 'bg-destructive/10', icon: XCircle },
+              { label: 'Critical Events', value: allLogs.filter(l => l.severity === 'critical').length, color: 'text-destructive', bg: 'bg-destructive/10', icon: Shield },
             ].map((s) => (
               <Card key={s.label}>
                 <CardContent className="p-4">
@@ -125,7 +163,7 @@ export default function AuditPage() {
                       <s.icon className={cn('h-6 w-6', s.color)} />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold">{s.value}</p>
+                      <p className="text-2xl font-bold">{isLoading ? '...' : s.value}</p>
                       <p className="text-sm text-muted-foreground">{s.label}</p>
                     </div>
                   </div>
@@ -181,7 +219,9 @@ export default function AuditPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filtered.map(log => <LogRow key={log.id} log={log} />)}
+                      {isLoading && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Loading logs...</TableCell></TableRow>}
+                      {!isLoading && filtered.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No logs found</TableCell></TableRow>}
+                      {!isLoading && filtered.map(log => <LogRow key={log.id} log={log} />)}
                     </TableBody>
                   </Table>
                 </CardContent>
@@ -203,7 +243,9 @@ export default function AuditPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {securityLogs.map(log => <LogRow key={log.id} log={log} />)}
+                      {isLoading && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Loading logs...</TableCell></TableRow>}
+                      {!isLoading && securityLogs.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No security events found</TableCell></TableRow>}
+                      {!isLoading && securityLogs.map(log => <LogRow key={log.id} log={log} />)}
                     </TableBody>
                   </Table>
                 </CardContent>
@@ -225,17 +267,15 @@ export default function AuditPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {adminLogs.length > 0
-                        ? adminLogs.map(log => <LogRow key={log.id} log={log} />)
-                        : <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No admin actions found</TableCell></TableRow>
-                      }
+                      {isLoading && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Loading logs...</TableCell></TableRow>}
+                      {!isLoading && adminLogs.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No admin actions found</TableCell></TableRow>}
+                      {!isLoading && adminLogs.map(log => <LogRow key={log.id} log={log} />)}
                     </TableBody>
                   </Table>
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
-
         </div>
       </main>
     </>

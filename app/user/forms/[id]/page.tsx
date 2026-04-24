@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import {
-  ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, Clock, FileText,
+  ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, Clock, FileText, Loader2, Info
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -17,51 +17,39 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { getFormById } from '@/lib/mock-user'
+import { syncService } from '@/lib/api/syncService'
+import { useAuth } from '@/lib/auth/AuthContext'
+import { toast } from 'sonner'
+import useSWR from 'swr'
+import { fetcher } from '@/lib/api/swr-fetcher'
 
 export default function FormDetailPage() {
   const params = useParams()
+  const router = useRouter()
+  const { user } = useAuth()
   const formId = params.id as string
-  const form = getFormById(formId)
-
-  const [currentStep, setCurrentStep] = useState(form?.draftStep || 0)
+  
+  const { data: response, error } = useSWR(`/forms/${formId}`, fetcher)
+  const [currentStep, setCurrentStep] = useState(0)
   const [formData, setFormData] = useState<Record<string, any>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  if (!form) {
-    return (
-      <>
-        <DashboardHeader
-          title="Form Not Found"
-          rootCrumb={{ label: 'Field', href: '/user/home' }}
-          breadcrumbs={[{ label: 'Forms', href: '/user/forms' }, { label: 'Not Found' }]}
-        />
-        <main className="flex-1 overflow-auto p-4 md:p-6">
-          <div className="mx-auto max-w-2xl">
-            <Card>
-              <CardContent className="p-6 text-center">
-                <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
-                <h2 className="text-lg font-semibold">Form Not Found</h2>
-                <p className="text-sm text-muted-foreground mt-2">The form you're looking for doesn't exist.</p>
-                <Button asChild className="mt-4">
-                  <Link href="/user/forms">Back to Forms</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </main>
-      </>
-    )
-  }
-
-  const currentStepData = form.steps[currentStep]
-  const progressPercent = ((currentStep + 1) / form.steps.length) * 100
+  const rawForm = response?.form || response?.data?.form || response || null
+  
+  // Process form schema
+  const form = rawForm ? {
+    ...rawForm,
+    steps: typeof rawForm.form_schema === 'string' 
+      ? JSON.parse(rawForm.form_schema) 
+      : (rawForm.form_schema || [])
+  } : null
 
   const handleFieldChange = (fieldId: string, value: any) => {
     setFormData(prev => ({ ...prev, [fieldId]: value }))
   }
 
   const handleNext = () => {
-    if (currentStep < form.steps.length - 1) {
+    if (form?.steps && currentStep < form.steps.length - 1) {
       setCurrentStep(currentStep + 1)
     }
   }
@@ -72,10 +60,65 @@ export default function FormDetailPage() {
     }
   }
 
-  const handleSubmit = () => {
-    // Submit form logic here
-    console.log('Submitting form:', formData)
+  const handleSubmit = async () => {
+    if (!user || !form) return
+    setIsSubmitting(true)
+
+    // Capture location
+    let location = { lat: 0, lng: 0 }
+    if (navigator.geolocation) {
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 })
+        })
+        location = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+      } catch (err) {
+        console.warn('Location capture failed, proceeding with 0,0')
+      }
+    }
+
+    const submissionData = {
+      form_id: formId,
+      user_id: user.id,
+      project_id: form.project_id,
+      responses: formData,
+      location: location
+    }
+
+    try {
+      await syncService.enqueue('form_submission', `Submit: ${form.title}`, submissionData)
+      toast.success('Submission queued!', {
+        description: 'Data will be synced as soon as a connection is stable.'
+      })
+      router.push('/user/forms')
+    } catch (error) {
+      toast.error('Failed to queue submission')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
+
+  if (error) {
+    return (
+      <div className="flex flex-col h-[400px] items-center justify-center space-y-4">
+        <AlertCircle className="h-12 w-12 text-destructive opacity-50" />
+        <h2 className="text-xl font-bold">Failed to load form</h2>
+        <Button variant="outline" onClick={() => router.push('/user/forms')}>Back to Forms</Button>
+      </div>
+    )
+  }
+
+  if (!form) {
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2 text-muted-foreground font-medium">Downloading form structure...</span>
+      </div>
+    )
+  }
+
+  const currentStepData = form.steps?.[currentStep]
+  const progressPercent = form.steps?.length ? ((currentStep + 1) / form.steps.length) * 100 : 0
 
   return (
     <>
@@ -83,169 +126,198 @@ export default function FormDetailPage() {
         title={form.title}
         rootCrumb={{ label: 'Field', href: '/user/home' }}
         breadcrumbs={[
-          { label: 'Forms', href: '/user/forms' },
+          { label: 'Forms gallery', href: '/user/forms' },
           { label: form.title },
         ]}
       />
-      <main className="flex-1 overflow-auto p-4 md:p-6">
-        <div className="mx-auto max-w-2xl space-y-6">
+      <main className="flex-1 overflow-auto p-4 md:p-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="mx-auto max-w-2xl space-y-8">
 
           {/* Form Header */}
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{form.title}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{form.description}</p>
-            <div className="flex flex-wrap items-center gap-3 mt-3">
-              <Badge variant={form.status === 'submitted' ? 'default' : form.status === 'draft' ? 'secondary' : 'outline'}>
-                {form.status === 'submitted' ? 'Submitted' : form.status === 'draft' ? 'Draft' : 'Not Started'}
+          <div className="space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <h1 className="text-3xl font-black tracking-tighter text-primary uppercase">{form.title}</h1>
+                <p className="text-sm text-muted-foreground font-medium max-w-prose">{form.description}</p>
+              </div>
+              <Badge variant="outline" className="h-6 font-bold uppercase tracking-widest border-primary/20 bg-primary/5 text-primary">
+                Session Active
               </Badge>
-              {form.deadline && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" /> Due {form.deadline}
-                </span>
-              )}
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-4 py-2 border-y border-primary/5">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground/80 uppercase">
+                <Clock className="h-3.5 w-3.5 text-amber-500" />
+                {form.deadline ? `Due: ${new Date(form.deadline).toLocaleDateString()}` : 'No Deadline'}
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground/80 uppercase">
+                <FileText className="h-3.5 w-3.5 text-blue-500" />
+                {form.steps.length} Progression Steps
+              </div>
             </div>
           </div>
 
           {/* Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Step {currentStep + 1} of {form.steps.length}</span>
-              <span className="text-sm text-muted-foreground">{Math.round(progressPercent)}%</span>
+          <div className="space-y-3 bg-muted/20 p-4 rounded-2xl border border-primary/5 shadow-inner">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-black text-primary uppercase tracking-widest">Progressive Verification</span>
+              <span className="text-[10px] font-black text-primary uppercase tabular-nums">{Math.round(progressPercent)}% COMPLETE</span>
             </div>
-            <Progress value={progressPercent} className="h-2" />
+            <Progress value={progressPercent} className="h-2.5 bg-background shadow-inner" />
           </div>
 
-          {/* Current Step */}
+          {/* Current Step Content */}
           {currentStepData && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">{currentStepData.title}</CardTitle>
-                <CardDescription>{currentStepData.description}</CardDescription>
+            <Card className="border-primary/10 shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+              <CardHeader className="bg-primary/[0.02] border-b border-primary/5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl font-bold">{currentStepData.title}</CardTitle>
+                    <CardDescription className="text-xs font-medium mt-1">{currentStepData.description}</CardDescription>
+                  </div>
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-primary text-sm">
+                    {currentStep + 1}
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {currentStepData.fields.map((field) => (
-                  <div key={field.id} className="space-y-2">
-                    <label className="text-sm font-medium flex items-center gap-1">
+              <CardContent className="space-y-8 pt-6">
+                {currentStepData.fields?.map((field: any) => (
+                  <div key={field.id} className="space-y-3 group">
+                    <label className="text-sm font-bold uppercase tracking-tight flex items-center gap-2 group-hover:text-primary transition-colors">
                       {field.label}
-                      {field.required && <span className="text-destructive">*</span>}
+                      {field.required && <span className="text-destructive text-lg leading-none">*</span>}
                     </label>
 
-                    {field.type === 'text' && (
-                      <Input
-                        placeholder={field.placeholder}
-                        value={formData[field.id] || ''}
-                        onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                      />
-                    )}
-
-                    {field.type === 'number' && (
-                      <Input
-                        type="number"
-                        placeholder={field.placeholder}
-                        value={formData[field.id] || ''}
-                        onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                      />
-                    )}
-
-                    {field.type === 'textarea' && (
-                      <Textarea
-                        placeholder={field.placeholder}
-                        value={formData[field.id] || ''}
-                        onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                        rows={4}
-                      />
-                    )}
-
-                    {field.type === 'dropdown' && (
-                      <Select value={formData[field.id] || ''} onValueChange={(v) => handleFieldChange(field.id, v)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select an option..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {field.options?.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-
-                    {field.type === 'radio' && (
-                      <div className="space-y-2">
-                        {field.options?.map((option) => (
-                          <label key={option} className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name={field.id}
-                              value={option}
-                              checked={formData[field.id] === option}
-                              onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                              className="w-4 h-4"
-                            />
-                            <span className="text-sm">{option}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-
-                    {field.type === 'checkbox' && (
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData[field.id] || false}
-                          onChange={(e) => handleFieldChange(field.id, e.target.checked)}
-                          className="w-4 h-4"
+                    <div className="space-y-2">
+                       {field.type === 'text' && (
+                        <Input
+                          placeholder={field.placeholder || "Enter text here..."}
+                          value={formData[field.id] || ''}
+                          className="h-11 bg-muted/20 border-primary/10 focus:border-primary focus:ring-1 focus:ring-primary shadow-sm"
+                          onChange={(e) => handleFieldChange(field.id, e.target.value)}
                         />
-                        <span className="text-sm">{field.label}</span>
-                      </label>
-                    )}
+                      )}
+
+                      {field.type === 'number' && (
+                        <Input
+                          type="number"
+                          placeholder={field.placeholder || "0.00"}
+                          value={formData[field.id] || ''}
+                          className="h-11 bg-muted/20 border-primary/10 focus:border-primary focus:ring-1 focus:ring-primary shadow-sm"
+                          onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                        />
+                      )}
+
+                      {field.type === 'textarea' && (
+                        <Textarea
+                          placeholder={field.placeholder || "Provide detailed observations..."}
+                          value={formData[field.id] || ''}
+                          className="min-h-[120px] bg-muted/20 border-primary/10 focus:border-primary focus:ring-1 focus:ring-primary shadow-sm"
+                          onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                        />
+                      )}
+
+                      {field.type === 'dropdown' && (
+                        <Select value={formData[field.id] || ''} onValueChange={(v) => handleFieldChange(field.id, v)}>
+                          <SelectTrigger className="h-11 bg-muted/20 border-primary/10">
+                            <SelectValue placeholder="Select from verified options..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {field.options?.map((option: any) => (
+                              <SelectItem key={option} value={option} className="font-medium">
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+
+                      {field.type === 'radio' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                          {field.options?.map((option: any) => (
+                            <label key={option} className={cn(
+                              "flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all active:scale-95",
+                              formData[field.id] === option 
+                                ? "bg-primary/5 border-primary shadow-sm" 
+                                : "bg-muted/10 border-transparent hover:border-primary/20"
+                            )}>
+                              <input
+                                type="radio"
+                                name={field.id}
+                                value={option}
+                                checked={formData[field.id] === option}
+                                onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                                className="w-5 h-5 accent-primary"
+                              />
+                              <span className="text-sm font-bold uppercase tracking-tight">{option}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {field.description && <p className="text-[10px] text-muted-foreground italic pl-1">{field.description}</p>}
                   </div>
                 ))}
               </CardContent>
             </Card>
           )}
 
-          {/* Navigation Buttons */}
-          <div className="flex gap-3 justify-between">
+          {/* Navigation Controls */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-between pb-8">
             <Button
               variant="outline"
+              size="lg"
               onClick={handlePrevious}
               disabled={currentStep === 0}
-              className="gap-2"
+              className="h-12 px-8 font-black uppercase tracking-widest border-primary/10 hover:bg-primary/5"
             >
-              <ChevronLeft className="h-4 w-4" /> Previous
+              <ChevronLeft className="h-5 w-5 mr-2" /> Back
             </Button>
 
-            <div className="flex gap-3">
+            <div className="flex gap-4">
               {currentStep === form.steps.length - 1 ? (
-                <>
-                  <Button variant="outline" asChild>
-                    <Link href="/user/forms">Cancel</Link>
-                  </Button>
-                  <Button onClick={handleSubmit} className="gap-2">
-                    <CheckCircle2 className="h-4 w-4" /> Submit Form
-                  </Button>
-                </>
+                <Button 
+                  size="lg"
+                  disabled={isSubmitting}
+                  onClick={handleSubmit} 
+                  className="h-12 px-10 font-black uppercase tracking-widest shadow-xl bg-primary hover:bg-primary/90"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  ) : (
+                    <CheckCircle2 className="h-5 w-5 mr-2" />
+                  )}
+                  Finalize & Sync
+                </Button>
               ) : (
-                <Button onClick={handleNext} className="gap-2">
-                  Next <ChevronRight className="h-4 w-4" />
+                <Button 
+                  size="lg"
+                  onClick={handleNext} 
+                  className="h-12 px-10 font-black uppercase tracking-widest shadow-xl"
+                >
+                  Continue <ChevronRight className="h-5 w-5 ml-2" />
                 </Button>
               )}
             </div>
           </div>
 
-          {/* Form Info */}
-          <Card className="bg-muted/50">
-            <CardContent className="p-4 text-sm text-muted-foreground space-y-2">
-              <p><strong>Assigned by:</strong> {form.assignedBy}</p>
-              {form.linkedTask && <p><strong>Linked to task:</strong> {form.linkedTask}</p>}
-              <p><strong>Zone:</strong> {form.zone}</p>
-            </CardContent>
-          </Card>
+          {/* Meta Info */}
+          <div className="bg-primary/5 rounded-2xl p-6 border border-primary/10 flex items-start gap-4">
+            <div className="p-3 bg-primary/10 rounded-full">
+              <Info className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black uppercase tracking-widest text-primary mb-1">Operational Data Security</h4>
+              <p className="text-xs text-muted-foreground font-medium leading-relaxed">
+                Your entries are automatically encrypted and stored in local cache. In case of network drops, 
+                data will persist across sessions until synchronization is confirmed with the primary hub.
+              </p>
+            </div>
+          </div>
 
         </div>
       </main>
     </>
   )
-}
+}

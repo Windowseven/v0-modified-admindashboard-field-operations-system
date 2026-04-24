@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
-import { GuestRoute } from "@/components/auth/ProtectedRoute";
+import { GuestRoute } from "@/components/features/auth/ProtectedRoute";
+import { BrandLogo } from "@/components/shared/branding/brand-logo";
 
 export const metadata: Metadata = {
   title: "FieldSync | Access",
@@ -18,15 +18,7 @@ export default function AuthLayout({
       <div className="min-h-screen flex bg-background">
         <div className="flex-1 flex flex-col items-center justify-center p-5 sm:p-8 overflow-y-auto">
           {/* Logo */}
-          <Link
-            href="/"
-            className="flex items-center gap-2 mb-8"
-          >
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-md shadow-primary/20">
-              <ShieldCheck className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-semibold text-xl tracking-tight">FieldSync</span>
-          </Link>
+          <BrandLogo href="/" className="mb-8" />
 
           {/* Form card */}
           <div className="w-full max-w-[440px]">
@@ -45,3 +37,4 @@ export default function AuthLayout({
     </GuestRoute>
   );
 }
+

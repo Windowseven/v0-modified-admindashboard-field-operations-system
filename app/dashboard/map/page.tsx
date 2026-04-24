@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -470,3 +470,4 @@ export default function MapPage() {
     </>
   )
 }
+

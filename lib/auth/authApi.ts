@@ -11,7 +11,7 @@ export interface RegisterPayload {
   email: string;
   phone?: string;
   password: string;
-  role?: "field_worker" | "supervisor";
+  role?: "field_agent" | "supervisor";
 }
 
 export interface RegisterResponse {

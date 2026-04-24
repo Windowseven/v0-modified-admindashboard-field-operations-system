@@ -1,18 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   HelpCircle, Users, Calendar, Send, CheckCircle2,
   XCircle, Clock, MessageCircle, Plus,
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { mockHelpRequests, type HelpRequestType, type HelpRequestStatus } from '@/lib/mock-user'
+import { helpRequestService, type ApiHelpRequest, type HelpRequestType, type HelpRequestStatus } from '@/lib/api/helpRequestService'
 
 const requestTypeConfig: Record<HelpRequestType, { label: string; icon: React.ElementType; color: string; bg: string; desc: string }> = {
   help: { label: 'Request Help', icon: HelpCircle, color: 'text-amber-500', bg: 'bg-amber-500/10', desc: 'Need assistance with a task' },
@@ -30,13 +30,37 @@ export default function UserHelpPage() {
   const [selectedType, setSelectedType] = useState<HelpRequestType | null>(null)
   const [message, setMessage] = useState('')
   const [sent, setSent] = useState(false)
+  const [requests, setRequests] = useState<ApiHelpRequest[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const handleSend = () => {
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true)
+        const data = await helpRequestService.getMine()
+        setRequests(data)
+      } catch (err) {
+        console.error('Failed to load help requests', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    load()
+  }, [])
+
+  const handleSend = async () => {
     if (!selectedType || !message.trim()) return
-    setSent(true)
-    setMessage('')
-    setSelectedType(null)
-    setTimeout(() => setSent(false), 3000)
+    try {
+      const created = await helpRequestService.create(selectedType, message.trim())
+      setRequests((prev) => [created, ...prev])
+      setSent(true)
+      setMessage('')
+      setSelectedType(null)
+      setTimeout(() => setSent(false), 3000)
+    } catch (err) {
+      console.error('Failed to send help request', err)
+    }
   }
 
   return (
@@ -138,7 +162,7 @@ export default function UserHelpPage() {
             <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
               Recent Requests
             </h2>
-            {mockHelpRequests.map((req) => {
+            {!loading && requests.map((req) => {
               const tc = requestTypeConfig[req.type]
               const sc = statusConfig[req.status]
               const StatusIcon = sc.icon
@@ -157,20 +181,22 @@ export default function UserHelpPage() {
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mt-0.5">{req.message}</p>
-                        <p className="text-[10px] text-muted-foreground mt-1">Sent at {req.sentAt}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">Sent at {new Date(req.created_at).toLocaleString()}</p>
                       </div>
                     </div>
 
-                    {req.responseNote && (
+                    {req.response_note && (
                       <div className={cn(
                         'rounded-lg p-3 text-xs border-l-2',
                         req.status === 'accepted'
                           ? 'bg-emerald-500/5 border-emerald-500'
                           : 'bg-muted/50 border-muted-foreground'
                       )}>
-                        <p className="font-semibold mb-0.5">{req.responseFrom} replied:</p>
-                        <p className="text-muted-foreground">{req.responseNote}</p>
-                        <p className="text-[10px] text-muted-foreground mt-1">at {req.responseAt}</p>
+                        <p className="font-semibold mb-0.5">{req.response_from ?? 'Supervisor'} replied:</p>
+                        <p className="text-muted-foreground">{req.response_note}</p>
+                        {req.response_at && (
+                          <p className="text-[10px] text-muted-foreground mt-1">at {new Date(req.response_at).toLocaleString()}</p>
+                        )}
                       </div>
                     )}
                   </CardContent>
@@ -184,3 +210,4 @@ export default function UserHelpPage() {
     </>
   )
 }
+

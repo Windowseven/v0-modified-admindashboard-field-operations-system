@@ -19,7 +19,9 @@ import {
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { useAuth } from '@/lib/auth/AuthContext'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
+import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -40,6 +42,7 @@ import { Textarea } from '@/components/ui/textarea'
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
+  const { user, isLoading: isAuthLoading } = useAuth()
   const [notifications, setNotifications] = React.useState({
     email: true,
     push: true,
@@ -102,8 +105,10 @@ export default function SettingsPage() {
                   {/* Avatar */}
                   <div className="flex items-center gap-6">
                     <Avatar className="h-20 w-20">
-                      <AvatarImage src="/placeholder-user.jpg" />
-                      <AvatarFallback className="text-xl">AD</AvatarFallback>
+                      <AvatarImage src={user?.avatar || "/placeholder-user.jpg"} />
+                      <AvatarFallback className="text-xl">
+                        {user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="space-y-2">
                       <Button variant="outline" size="sm">
@@ -121,15 +126,15 @@ export default function SettingsPage() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name</Label>
-                      <Input id="firstName" defaultValue="Admin" />
+                      <Input id="firstName" defaultValue={user?.first_name || user?.name?.split(' ')[0] || ''} key={user?.id} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="lastName">Last Name</Label>
-                      <Input id="lastName" defaultValue="User" />
+                      <Input id="lastName" defaultValue={user?.name?.split(' ').slice(1).join(' ') || ''} key={user?.id + '_last'} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" defaultValue="admin@fieldsync.io" />
+                      <Input id="email" type="email" defaultValue={user?.email || ''} key={user?.id + '_email'} disabled />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone</Label>
@@ -604,3 +609,4 @@ export default function SettingsPage() {
     </>
   )
 }
+

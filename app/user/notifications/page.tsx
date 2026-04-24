@@ -1,18 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Bell, CheckCheck, ListTodo, FileText,
-  MessageSquare, AlertTriangle, Info, Zap,
+  MessageSquare, AlertTriangle, Info, Zap, Loader2,
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { mockUserNotifications, type NotificationType } from '@/lib/mock-user'
+import { notificationService, type ApiNotification } from '@/lib/api/notificationService'
+import { fieldSyncSocket } from '@/lib/auth/socketManager'
 
-const typeConfig: Record<NotificationType, { icon: React.ElementType; color: string; bg: string }> = {
+const typeConfig: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
   task: { icon: ListTodo, color: 'text-primary', bg: 'bg-primary/10' },
   form: { icon: FileText, color: 'text-blue-500', bg: 'bg-blue-500/10' },
   message: { icon: MessageSquare, color: 'text-purple-500', bg: 'bg-purple-500/10' },
@@ -21,15 +22,64 @@ const typeConfig: Record<NotificationType, { icon: React.ElementType; color: str
 }
 
 export default function UserNotificationsPage() {
-  const [notifications, setNotifications] = useState(mockUserNotifications)
-  const unreadCount = notifications.filter((n) => !n.isRead).length
+  const [notifications, setNotifications] = useState<ApiNotification[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
+  useEffect(() => {
+    fetchNotifications()
+  }, [])
+
+  useEffect(() => {
+    const unsubscribe = fieldSyncSocket.on('notification:new', (payload) => {
+      const notif = payload as ApiNotification | null
+      if (!notif?.id) return
+      setNotifications((prev) => [notif, ...prev])
+    })
+
+    return () => unsubscribe()
+  }, [])
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true)
+      const data = await notificationService.getAll()
+      setNotifications(data)
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const markRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n))
+  const unreadCount = notifications.filter((n) => !n.is_read).length
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`
+    return date.toLocaleDateString()
+  }
+
+  const markAllRead = async () => {
+    try {
+      await notificationService.markAllAsRead()
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
+    } catch (error) {
+      console.error('Failed to mark all as read:', error)
+    }
+  }
+
+  const markRead = async (id: string) => {
+    try {
+      await notificationService.markAsRead(id)
+      setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n))
+    } catch (error) {
+      console.error('Failed to mark as read:', error)
+    }
   }
 
   return (
@@ -67,7 +117,7 @@ export default function UserNotificationsPage() {
                   key={notif.id}
                   className={cn(
                     'transition-colors cursor-pointer hover:shadow-sm',
-                    !notif.isRead && 'border-primary/20 bg-primary/[0.02]'
+                    !notif.is_read && 'border-primary/20 bg-primary/[0.02]'
                   )}
                   onClick={() => markRead(notif.id)}
                 >
@@ -77,14 +127,14 @@ export default function UserNotificationsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <p className={cn('text-sm leading-tight', !notif.isRead ? 'font-semibold' : 'font-medium')}>
+                        <p className={cn('text-sm leading-tight', !notif.is_read ? 'font-semibold' : 'font-medium')}>
                           {notif.title}
                         </p>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          {!notif.isRead && (
+                          {!notif.is_read && (
                             <span className="h-2 w-2 rounded-full bg-primary" />
                           )}
-                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">{notif.time}</span>
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">{formatTime(notif.created_at)}</span>
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{notif.body}</p>
@@ -110,3 +160,4 @@ export default function UserNotificationsPage() {
     </>
   )
 }
+

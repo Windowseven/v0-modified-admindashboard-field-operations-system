@@ -4,45 +4,45 @@ import { Suspense, useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   Users, Search, MoreHorizontal, CheckCircle2, AlertTriangle, XCircle,
-  Shield, LogOut, Key, Ban, Eye, UserCog, UserCheck, User, Download,
+  Shield, LogOut, Key, Ban, Eye, UserCog, UserCheck, User, Download, Loader2, Trash2
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { http } from '@/lib/api/httpClient'
+import { userService } from '@/lib/api/userService'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 
-const allUsers = [
-  { id: 'u-001', name: 'Grace Wanjiku', email: 'grace.w@fieldsync.io', role: 'Supervisor', status: 'active', verified: true, joined: 'Jan 2026', lastActive: '2m ago', initials: 'GW', project: '3 projects' },
-  { id: 'u-002', name: 'Ahmed Omar', email: 'ahmed.o@fieldsync.io', role: 'Supervisor', status: 'active', verified: true, joined: 'Jan 2026', lastActive: '15m ago', initials: 'AO', project: '2 projects' },
-  { id: 'u-003', name: 'Peter Kamau', email: 'peter.k@fieldsync.io', role: 'Team Leader', status: 'active', verified: true, joined: 'Feb 2026', lastActive: '5m ago', initials: 'PK', project: 'Nairobi Campaign' },
-  { id: 'u-004', name: 'James Mwangi', email: 'james.m@fieldsync.io', role: 'Field Worker', status: 'active', verified: true, joined: 'Feb 2026', lastActive: 'Just now', initials: 'JM', project: 'Nairobi Campaign' },
-  { id: 'u-005', name: 'Amina Hassan', email: 'amina.h@fieldsync.io', role: 'Field Worker', status: 'active', verified: true, joined: 'Mar 2026', lastActive: '3m ago', initials: 'AH', project: 'Mombasa Census' },
-  { id: 'u-006', name: 'Kwame Asante', email: 'kwame.a@fieldsync.io', role: 'Supervisor', status: 'suspended', verified: true, joined: 'Jan 2026', lastActive: '4 days ago', initials: 'KA', project: '—' },
-  { id: 'u-007', name: 'David Osei', email: 'david.o@fieldsync.io', role: 'Field Worker', status: 'active', verified: true, joined: 'Mar 2026', lastActive: '12m ago', initials: 'DO', project: 'Kampala Outreach' },
-  { id: 'u-008', name: 'Fatima Diallo', email: 'fatima.d@fieldsync.io', role: 'Field Worker', status: 'active', verified: false, joined: 'Apr 2026', lastActive: '1h ago', initials: 'FD', project: 'Dar es Salaam' },
-  { id: 'u-009', name: 'Samuel Asante', email: 'samuel.a@fieldsync.io', role: 'Team Leader', status: 'inactive', verified: true, joined: 'Jan 2026', lastActive: '3 days ago', initials: 'SA', project: 'Nairobi Campaign' },
-  { id: 'u-010', name: 'Marie Uwase', email: 'marie.u@fieldsync.io', role: 'Supervisor', status: 'active', verified: true, joined: 'Mar 2026', lastActive: '45m ago', initials: 'MU', project: '1 project' },
-  { id: 'u-011', name: 'Junior Lespikius', email: 'junior.l@fieldsync.io', role: 'Supervisor', status: 'active', verified: true, joined: 'Mar 2026', lastActive: 'Just now', initials: 'JL', project: '4 projects' },
-  { id: 'u-012', name: 'Lydia Nakato', email: 'lydia.n@fieldsync.io', role: 'Team Leader', status: 'active', verified: true, joined: 'Feb 2026', lastActive: '8m ago', initials: 'LN', project: 'Kigali Survey' },
-]
-
-const roleConfig: Record<string, { icon: React.ElementType; className: string }> = {
-  Supervisor: { icon: UserCog, className: 'bg-blue-500/10 text-blue-500' },
-  'Team Leader': { icon: UserCheck, className: 'bg-emerald-500/10 text-emerald-500' },
-  'Field Worker': { icon: User, className: 'bg-primary/10 text-primary' },
+interface PlatformUser {
+  id: string
+  name: string
+  email: string
+  role: string
+  status: string
+  last_seen?: string
+  avatar?: string
+  first_name?: string
 }
 
-const statusConfig: Record<string, { className: string; icon: React.ElementType }> = {
-  active: { className: 'bg-emerald-500/10 text-emerald-500', icon: CheckCircle2 },
-  inactive: { className: 'bg-muted text-muted-foreground', icon: AlertTriangle },
-  suspended: { className: 'bg-destructive/10 text-destructive', icon: XCircle },
+const roleConfig: Record<string, { icon: React.ElementType; className: string; label: string }> = {
+  admin: { icon: Shield, className: 'bg-purple-500/10 text-purple-500', label: 'Admin' },
+  supervisor: { icon: UserCog, className: 'bg-blue-500/10 text-blue-500', label: 'Supervisor' },
+  team_leader: { icon: UserCheck, className: 'bg-emerald-500/10 text-emerald-500', label: 'Team Leader' },
+  field_agent: { icon: User, className: 'bg-primary/10 text-primary', label: 'Field Worker' },
+}
+
+const statusConfig: Record<string, { className: string; icon: React.ElementType; label: string }> = {
+  active: { className: 'bg-emerald-500/10 text-emerald-500', icon: CheckCircle2, label: 'Active' },
+  online: { className: 'bg-emerald-500/10 text-emerald-500', icon: CheckCircle2, label: 'Online' },
+  inactive: { className: 'bg-muted text-muted-foreground', icon: AlertTriangle, label: 'Inactive' },
+  suspended: { className: 'bg-destructive/10 text-destructive', icon: XCircle, label: 'Suspended' },
 }
 
 const validTabs = ['all', 'supervisors', 'leaders', 'workers'] as const
@@ -55,10 +55,42 @@ function UsersPageContent() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+
+  const [allUsers, setAllUsers] = useState<PlatformUser[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [activeTab, setActiveTab] = useState<(typeof validTabs)[number]>(() => normalizeTab(searchParams.get('tab')))
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setIsLoading(true)
+      try {
+        const response = await http.get<{ data: { users: PlatformUser[] } }>('/users')
+        setAllUsers(response.data.users)
+        setError(null)
+      } catch (err: any) {
+        console.error('Failed to fetch users:', err)
+        setError('Failed to load user list from database.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchUsers()
+  }, [])
+
+  const handleDeleteUser = async (id: string) => {
+    if (!confirm('Are you sure you want to permanently delete this user?')) return;
+    const success = await userService.deleteUser(id);
+    if (success) {
+      setAllUsers(prev => prev.filter(u => u.id !== id));
+    } else {
+      alert('Failed to delete user');
+    }
+  }
 
   useEffect(() => {
     setActiveTab(normalizeTab(searchParams.get('tab')))
@@ -74,9 +106,9 @@ function UsersPageContent() {
   const byRole = (role: string) => allUsers.filter(u => u.role === role)
   const counts = {
     all: allUsers.length,
-    supervisors: byRole('Supervisor').length,
-    leaders: byRole('Team Leader').length,
-    workers: byRole('Field Worker').length,
+    supervisors: byRole('supervisor').length,
+    leaders: byRole('team_leader').length,
+    workers: byRole('field_agent').length,
     suspended: allUsers.filter(u => u.status === 'suspended').length,
   }
 
@@ -111,14 +143,16 @@ function UsersPageContent() {
       </TableHeader>
       <TableBody>
         {users.map((user) => {
-          const rc = roleConfig[user.role]
-          const sc = statusConfig[user.status]
+          const rc = roleConfig[user.role] || roleConfig.field_agent
+          const sc = statusConfig[user.status] || statusConfig.active
+          const initials = user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+          
           return (
             <TableRow key={user.id}>
               <TableCell>
                 <div className="flex items-center gap-3">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{user.initials}</AvatarFallback>
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{initials}</AvatarFallback>
                   </Avatar>
                   <div>
                     <p className="font-medium text-sm">{user.name}</p>
@@ -129,21 +163,19 @@ function UsersPageContent() {
               <TableCell>
                 <Badge variant="secondary" className={rc.className}>
                   <rc.icon className="h-3 w-3 mr-1" />
-                  {user.role}
+                  {rc.label}
                 </Badge>
               </TableCell>
-              <TableCell><span className="text-sm text-muted-foreground">{user.project}</span></TableCell>
-              <TableCell><span className="text-sm text-muted-foreground">{user.lastActive}</span></TableCell>
-              <TableCell><span className="text-sm text-muted-foreground">{user.joined}</span></TableCell>
+              <TableCell><span className="text-sm text-muted-foreground">Global Registry</span></TableCell>
+              <TableCell><span className="text-sm text-muted-foreground">{user.last_seen ? new Date(user.last_seen).toLocaleDateString() : 'Never'}</span></TableCell>
+              <TableCell><span className="text-sm text-muted-foreground">Live Data</span></TableCell>
               <TableCell>
-                {user.verified
-                  ? <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  : <AlertTriangle className="h-4 w-4 text-amber-500" />}
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
               </TableCell>
               <TableCell>
                 <Badge variant="secondary" className={sc.className}>
                   <sc.icon className="h-3 w-3 mr-1" />
-                  {user.status}
+                  {sc.label}
                 </Badge>
               </TableCell>
               <TableCell>
@@ -168,6 +200,10 @@ function UsersPageContent() {
                         <CheckCircle2 className="mr-2 h-4 w-4" /> Reactivate
                       </DropdownMenuItem>
                     )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-destructive focus:text-destructive cursor-pointer" onClick={() => handleDeleteUser(user.id)}>
+                      <Trash2 className="mr-2 h-4 w-4" /> Delete User
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
@@ -231,9 +267,10 @@ function UsersPageContent() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="Supervisor">Supervisor</SelectItem>
-                <SelectItem value="Team Leader">Team Leader</SelectItem>
-                <SelectItem value="Field Worker">Field Worker</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="supervisor">Supervisor</SelectItem>
+                <SelectItem value="team_leader">Team Leader</SelectItem>
+                <SelectItem value="field_agent">Field Worker</SelectItem>
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -243,11 +280,26 @@ function UsersPageContent() {
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="online">Online</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
                 <SelectItem value="suspended">Suspended</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {isLoading && (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground">Fetching users from MySQL database...</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-destructive/10 text-destructive p-4 rounded-lg flex items-center gap-3">
+              <XCircle className="h-5 w-5" />
+              <p>{error}</p>
+            </div>
+          )}
 
           <Tabs value={activeTab} onValueChange={updateTab}>
             <TabsList>
@@ -261,13 +313,13 @@ function UsersPageContent() {
               <Card><CardContent className="p-0"><UserTable users={filtered} /></CardContent></Card>
             </TabsContent>
             <TabsContent value="supervisors">
-              <Card><CardContent className="p-0"><UserTable users={byRole('Supervisor')} /></CardContent></Card>
+              <Card><CardContent className="p-0"><UserTable users={byRole('supervisor')} /></CardContent></Card>
             </TabsContent>
             <TabsContent value="leaders">
-              <Card><CardContent className="p-0"><UserTable users={byRole('Team Leader')} /></CardContent></Card>
+              <Card><CardContent className="p-0"><UserTable users={byRole('team_leader')} /></CardContent></Card>
             </TabsContent>
             <TabsContent value="workers">
-              <Card><CardContent className="p-0"><UserTable users={byRole('Field Worker')} /></CardContent></Card>
+              <Card><CardContent className="p-0"><UserTable users={byRole('field_agent')} /></CardContent></Card>
             </TabsContent>
           </Tabs>
 
@@ -284,3 +336,4 @@ export default function UsersPage() {
     </Suspense>
   )
 }
+

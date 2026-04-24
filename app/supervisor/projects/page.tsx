@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   Plus, Search, FolderOpen, Users, Layers, ClipboardList,
   TrendingUp, Clock, ArrowRight, MoreHorizontal, Play,
-  Pause, Archive, Copy, Filter,
+  Pause, Archive, Copy, Filter, Loader2
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -21,13 +21,42 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { mockProjects, statusConfig, type ProjectStatus } from '@/lib/mock-projects'
+import { http } from '@/lib/api/httpClient'
+
+const statusConfig: Record<string, any> = {
+  active: { label: 'Active', className: 'bg-emerald-500/10 text-emerald-500', dot: 'bg-emerald-500' },
+  paused: { label: 'Paused', className: 'bg-amber-500/10 text-amber-500', dot: 'bg-amber-500' },
+  draft: { label: 'Draft', className: 'bg-muted/60 text-muted-foreground', dot: 'bg-muted-foreground' },
+  archived: { label: 'Archived', className: 'bg-gray-500/10 text-gray-500', dot: 'bg-gray-500' },
+}
+
+export type ProjectStatus = 'active' | 'paused' | 'draft' | 'archived'
 
 export default function SupervisorWorkspacePage() {
+  const [projects, setProjects] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | ProjectStatus>('all')
 
-  const filtered = mockProjects.filter((p) => {
+  useEffect(() => {
+    fetchProjects()
+  }, [])
+
+  const fetchProjects = async () => {
+    try {
+      setLoading(true)
+      const res: any = await http.get('/projects')
+      if (res.status === 'success') {
+        setProjects(res.data.projects)
+      }
+    } catch (error) {
+      console.error('[Supervisor] Fetch failed:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filtered = projects.filter((p) => {
     const matchSearch =
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.location.toLowerCase().includes(search.toLowerCase())
@@ -35,9 +64,17 @@ export default function SupervisorWorkspacePage() {
     return matchSearch && matchStatus
   })
 
-  const activeCount = mockProjects.filter((p) => p.status === 'active').length
-  const totalMembers = mockProjects.reduce((acc, p) => acc + p.memberCount, 0)
-  const totalSubmissions = mockProjects.reduce((acc, p) => acc + p.totalSubmissions, 0)
+  const activeCount = projects.filter((p) => p.status === 'active').length
+  const totalMembers = projects.reduce((acc, p) => acc + (p.memberCount || 0), 0)
+  const totalSubmissions = projects.reduce((acc, p) => acc + (p.total_submissions || 0), 0)
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   return (
     <>
@@ -260,3 +297,4 @@ function EmptyState({ hasSearch }: { hasSearch: boolean }) {
     </div>
   )
 }
+

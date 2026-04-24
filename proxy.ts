@@ -1,12 +1,13 @@
 // ============================================================
-// FieldSync – Next.js Middleware (UPDATED)
-// FILE: middleware.ts
+// FieldSync – Next.js Proxy (Next.js 16+ Convention)
+// FILE: proxy.ts
 //
-// Changes from original:
+// Changes from original middleware:
+//   + Renamed file to proxy.ts and function to proxy()
 //   + Added /api/auth/register, /api/auth/verify-otp,
 //     /api/auth/resend-otp, /api/auth/forgot-password,
 //     /api/auth/reset-password to PUBLIC_ROUTES
-//   + Added /verify-otp route to GUEST_ONLY list (was missing)
+//   + Added /verify-otp route to GUEST_ONLY list
 // ============================================================
 
 import { NextResponse } from "next/server";
@@ -14,15 +15,18 @@ import type { NextRequest } from "next/server";
 
 // ─── Route configuration ──────────────────────────────────────
 const GUEST_ONLY = [
+  "/",
+  "/landing",
   "/login",
   "/register",
   "/forgot-password",
   "/reset-password",
-  "/verify-otp",         // ← ensure this is present
+  "/verify-otp",
 ];
 
 const PUBLIC_ROUTES = [
   "/",
+  "/landing",
   "/unauthorized",
   // Auth API endpoints — no token needed for these
   "/api/auth/login",
@@ -40,7 +44,7 @@ const ROLE_ROUTES: Record<string, string[]> = {
   admin: ["/dashboard", "/supervisor", "/teamleader", "/user"],
   supervisor: ["/supervisor", "/teamleader", "/user"],
   team_leader: ["/teamleader", "/user"],
-  field_worker: ["/user"],
+  field_agent: ["/user"],
 };
 
 // Role → home dashboard
@@ -48,7 +52,7 @@ const ROLE_HOME: Record<string, string> = {
   admin: "/dashboard",
   supervisor: "/supervisor",
   team_leader: "/teamleader",
-  field_worker: "/user",
+  field_agent: "/user",
 };
 
 // ─── Edge-safe JWT decode ─────────────────────────────────────
@@ -114,8 +118,8 @@ function addSecurityHeaders(response: NextResponse): void {
   response.headers.set("Content-Security-Policy", csp.join("; "));
 }
 
-// ─── Main middleware ──────────────────────────────────────────
-export default function middleware(request: NextRequest) {
+// ─── Main proxy ──────────────────────────────────────────────
+export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // HTTPS enforcement (production)

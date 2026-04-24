@@ -4,3 +4,4 @@ export default function TeamLeaderPage() {
   redirect('/teamleader/overview')
 }
 
+

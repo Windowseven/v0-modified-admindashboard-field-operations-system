@@ -5,6 +5,10 @@
 // Global authentication & authorization state provider
 // ============================================================
 
+const isDev = process.env.NODE_ENV === "development";
+function devLog(...args: unknown[]) { if (isDev) console.log(...args); }
+function devWarn(...args: unknown[]) { if (isDev) console.warn(...args); }
+
 import React, {
   createContext,
   useCallback,
@@ -26,6 +30,7 @@ import { ROLE_DASHBOARDS, STORAGE_KEYS } from "@/types/auth.types";
 import { tokenManager, activityTracker } from "./tokenManager";
 import { sessionManager } from "./sessionManager";
 import { hasPermission, hasAnyPermission, hasAllPermissions } from "./permissions";
+import { fieldSyncSocket } from "./socketManager";
 
 // ─── Initial State ────────────────────────────────────────────
 const initialState: AuthState = {
@@ -125,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ─── Logout ─────────────────────────────────────────────────
   const logout = useCallback(
     (reason = "manual") => {
-      console.log("[Auth] Logout triggered, reason:", reason);
+      devLog("[Auth] Logout triggered, reason:", reason);
       sessionManager.stop();
       sessionManager.broadcastLogout();
       tokenManager.clearAll();
@@ -140,30 +145,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshSession = useCallback(async () => {
     const refreshToken = tokenManager.getRefreshToken();
     if (!refreshToken) {
-      console.warn("[Auth] No refresh token available for refresh");
-      logout("no_refresh_token");
-      return;
+      devWarn("[Auth] No refresh token available for refresh");
+      return; // Don't logout, just return
     }
 
     console.log("[Auth] Attempting token refresh...");
     dispatch({ type: "TOKEN_REFRESHING" });
 
     try {
-      const res = await fetch("/api/auth/refresh", {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+      const res = await fetch(`${baseUrl}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refreshToken }),
       });
 
-      if (!res.ok) throw new Error("Refresh failed");
+      if (!res.ok) {
+        devWarn("[Auth] Refresh endpoint returned error:", res.status);
+        return; // Don't logout, just return
+      }
 
       const data = await res.json();
+      if (!data.token) {
+        devWarn("[Auth] Refresh response missing token");
+        return;
+      }
+
       const newExpiry = Date.now() + data.expiresIn * 1000;
 
       tokenManager.setToken(data.token, sessionManager.isRememberMeEnabled());
       tokenManager.setExpiry(newExpiry);
 
-      console.log("[Auth] Token refreshed successfully");
+      devLog("[Auth] Token refreshed successfully");
       dispatch({
         type: "TOKEN_REFRESHED",
         payload: { token: data.token, sessionExpiry: newExpiry },
@@ -171,18 +184,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       sessionManager.scheduleTokenRefresh(refreshSession);
     } catch (err) {
-      console.error("[Auth] Refresh failed:", err);
-      logout("token_expired");
+      devWarn("[Auth] Refresh failed (non-critical):", err);
+      // Don't logout - just let the user continue with their current token
+      // They will be redirected to login when the token actually expires
     }
   }, [logout]);
 
   // ─── Login ──────────────────────────────────────────────────
   const login = useCallback(
     async (credentials: LoginCredentials) => {
+      devLog("[Auth] Login started for:", credentials.email);
       dispatch({ type: "AUTH_LOADING" });
 
       try {
-        const res = await fetch("/api/auth/login", {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+        devLog("[Auth] Fetching from:", `${baseUrl}/auth/login`);
+        const res = await fetch(`${baseUrl}/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -192,20 +209,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (!res.ok) {
-          throw new Error("Invalid credentials. Please try again.");
+          const errorData = await res.json().catch(() => null);
+          throw new Error(
+            errorData?.message ||
+              errorData?.data?.message ||
+              "Invalid credentials. Please try again."
+          );
         }
 
-        const data = await res.json();
-        const expiryMs = Date.now() + data.expiresIn * 1000;
+        const response = await res.json();
+        devLog("[Auth] Login response received");
+        
+        if (response.status !== 'success' || !response.data?.user?.role) {
+          throw new Error(response.data?.message || "Invalid credentials. Please try again.");
+        }
+        
+        const { token, refreshToken, expiresIn, user } = response.data;
+        const expiryMs = Date.now() + expiresIn * 1000;
 
-        tokenManager.setToken(data.token, credentials.rememberMe);
-        tokenManager.setRefreshToken(data.refreshToken);
+        tokenManager.setToken(token, credentials.rememberMe);
+        tokenManager.setRefreshToken(refreshToken);
         tokenManager.setExpiry(expiryMs);
         sessionManager.setRememberMe(credentials.rememberMe ?? false);
 
         try {
           const storage = credentials.rememberMe ? localStorage : sessionStorage;
-          storage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user));
+          storage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
         } catch {}
 
         activityTracker.updateLastActivity();
@@ -213,20 +242,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         dispatch({
           type: "AUTH_SUCCESS",
           payload: {
-            user: data.user,
-            token: data.token,
-            refreshToken: data.refreshToken,
+            user,
+            token,
+            refreshToken,
             sessionExpiry: expiryMs,
           },
         });
 
-        const dashboard = ROLE_DASHBOARDS[data.user.role as UserRole] ?? "/";
+        const dashboard = ROLE_DASHBOARDS[user.role as UserRole] ?? "/";
+        devLog("[Auth] Redirecting to:", dashboard, "for role:", user.role);
         router.push(dashboard);
       } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Authentication failed";
         dispatch({
           type: "AUTH_FAILURE",
-          payload: err instanceof Error ? err.message : "Authentication failed",
+          payload: message,
         });
+        throw err instanceof Error ? err : new Error(message);
       }
     },
     [router]
@@ -235,24 +268,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ─── Hydrate from storage on mount ───────────────────────────
   useEffect(() => {
     const hydrate = async () => {
-      console.log("[Auth] Starting hydration...");
+      devLog("[Auth] Starting hydration...");
       try {
         const token = tokenManager.getToken();
         const refreshToken = tokenManager.getRefreshToken();
         const expiry = tokenManager.getExpiry();
 
         if (!token) {
-          console.log("[Auth] No token found during hydration");
+          devLog("[Auth] No token found during hydration");
           dispatch({ type: "AUTH_LOGOUT" });
           return;
         }
 
         if (tokenManager.isTokenExpired(token)) {
-          console.log("[Auth] Token expired, checking refresh token...");
+          devLog("[Auth] Token expired, checking refresh token...");
           if (refreshToken) {
             await refreshSession();
           } else {
-            console.warn("[Auth] Token expired and no refresh token found");
+            devWarn("[Auth] Token expired and no refresh token found");
             tokenManager.clearAll();
             dispatch({ type: "AUTH_LOGOUT" });
           }
@@ -268,13 +301,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch {}
 
         if (!user) {
-          console.error("[Auth] Token exists but user data is missing");
+          devWarn("[Auth] Token exists but user data is missing");
           tokenManager.clearAll();
           dispatch({ type: "AUTH_LOGOUT" });
           return;
         }
 
-        console.log("[Auth] Hydration successful for user:", user.email);
+        devLog("[Auth] Hydration successful for user:", user.email);
         dispatch({
           type: "AUTH_SUCCESS",
           payload: {
@@ -285,7 +318,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           },
         });
       } catch (err) {
-        console.error("[Auth] Hydration error:", err);
+        devWarn("[Auth] Hydration error:", err);
         tokenManager.clearAll();
         dispatch({ type: "AUTH_LOGOUT" });
       }
@@ -316,6 +349,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => sessionManager.stop();
   }, [state.isAuthenticated, logout, refreshSession]);
+
+  // Real-time socket connection (notifications/location/etc)
+  useEffect(() => {
+    if (!state.isAuthenticated) {
+      fieldSyncSocket.close();
+      return;
+    }
+
+    fieldSyncSocket.connect({
+      path: "/ws",
+      onAuthError: () => logout("socket_auth"),
+    });
+
+    return () => fieldSyncSocket.close();
+  }, [state.isAuthenticated, logout]);
 
   // ─── Permission helpers ───────────────────────────────────────
   const can = useCallback(

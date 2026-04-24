@@ -2,12 +2,11 @@
 
 import * as React from 'react'
 import {
-  Shield, Search, Filter, Download, Trash2,
-  Clock, CheckCircle2, AlertTriangle, XCircle,
-  FileText, User, Users, Globe, Eye,
+  Shield, Search, Filter, Download,
+  Clock, FileText, Users, Globe, Eye,
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,54 +19,68 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog'
-import { cn } from '@/lib/utils'
-
-interface AuditEntry {
-  id: string
-  action: string
-  details: string
-  user: string
-  role: string
-  timestamp: string
-  severity: 'low' | 'medium' | 'high'
-  category: 'user_management' | 'data_collection' | 'project_config' | 'security'
-  ip: string
-}
-
-const auditLogs: AuditEntry[] = [
-  { id: '1', action: 'Approved Submission', details: 'Form #FS-1029 approved by supervisor', user: 'Sarah Johnson', role: 'Team Leader', timestamp: '2 mins ago', severity: 'low', category: 'data_collection', ip: '192.168.1.42' },
-  { id: '2', action: 'New Project Member', details: 'Added Kwame Asante to Team Alpha', user: 'Sarah Johnson', role: 'Team Leader', timestamp: '9 mins ago', severity: 'low', category: 'user_management', ip: '192.168.1.42' },
-  { id: '3', action: 'Geo-fence Update', details: 'Core boundaries updated for Zone A', user: 'System', role: 'Automated', timestamp: '45 mins ago', severity: 'medium', category: 'project_config', ip: '—' },
-  { id: '4', action: 'Data Export', details: 'Full project export initiated by supervisor', user: 'Admin User', role: 'Admin', timestamp: '2 hours ago', severity: 'high', category: 'security', ip: '10.0.0.15' },
-  { id: '5', action: 'Rejected Submission', details: 'Form #FS-0982 rejected due to blurry photo', user: 'James Kariuki', role: 'Team Leader', timestamp: '4 hours ago', severity: 'medium', category: 'data_collection', ip: '192.168.1.53' },
-  { id: '6', action: 'Project Paused', details: 'Project state changed to PAUSED', user: 'Admin User', role: 'Admin', timestamp: '1 day ago', severity: 'high', category: 'project_config', ip: '10.0.0.15' },
-  { id: '7', action: 'Team Disbanded', details: 'Team Zeta disbanded and members reassigned', user: 'Admin User', role: 'Admin', timestamp: '2 days ago', severity: 'high', category: 'user_management', ip: '10.0.0.15' },
-]
-
-const severityConfig = {
-  low: { label: 'Low', className: 'bg-emerald-500/10 text-emerald-500' },
-  medium: { label: 'Medium', className: 'bg-amber-500/10 text-amber-500' },
-  high: { label: 'High', className: 'bg-rose-500/10 text-rose-500' },
-}
-
-const categoryIcons = {
-  user_management: Users,
-  data_collection: FileText,
-  project_config: Globe,
-  security: Shield,
-}
+import { fieldSyncSocket } from '@/lib/auth/socketManager'
+import { auditService, type ApiAuditLog, type FrontendAuditLog } from '@/lib/api/auditService'
+import { toast } from '@/components/ui/use-toast'
 
 export default function AuditLogsPage() {
+  const [logs, setLogs] = React.useState<FrontendAuditLog[]>([])
+  const [isLoading, setIsLoading] = React.useState(true)
   const [search, setSearch] = React.useState('')
   const [severityFilter, setSeverityFilter] = React.useState('all')
 
-  const filtered = auditLogs.filter(log => {
-    const matchSearch = log.action.toLowerCase().includes(search.toLowerCase()) ||
-                        log.details.toLowerCase().includes(search.toLowerCase()) ||
-                        log.user.toLowerCase().includes(search.toLowerCase())
+  React.useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        setIsLoading(true)
+        const data = await auditService.getAll()
+        setLogs(data.map(log => auditService.transformForFrontend(log)))
+      } catch (error) {
+        console.error('Failed to fetch audit logs:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load audit logs. Please refresh.',
+          variant: 'destructive',
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchLogs()
+  }, [])
+
+  React.useEffect(() => {
+    const unsubscribe = fieldSyncSocket.on('audit_log', (data) => {
+      const transformed = auditService.transformForFrontend(data as ApiAuditLog)
+      setLogs((current) => {
+        const deduped = current.filter((item) => item.id !== transformed.id)
+        return [transformed, ...deduped]
+      })
+    })
+
+    return unsubscribe
+  }, [])
+
+  const filtered = logs.filter(log => {
+    const matchSearch = String(log.action || '').toLowerCase().includes(search.toLowerCase()) ||
+                        String(log.details || '').toLowerCase().includes(search.toLowerCase()) ||
+                        String(log.user || '').toLowerCase().includes(search.toLowerCase())
     const matchSeverity = severityFilter === 'all' || log.severity === severityFilter
     return matchSearch && matchSeverity
   })
+
+  const severityConfig = {
+    low: { label: 'Low', className: 'bg-emerald-500/10 text-emerald-500' },
+    medium: { label: 'Medium', className: 'bg-amber-500/10 text-amber-500' },
+    high: { label: 'High', className: 'bg-rose-500/10 text-rose-500' },
+  }
+
+  const categoryIcons = {
+    user_management: Users,
+    data_collection: FileText,
+    project_config: Globe,
+    security: Shield,
+  } satisfies Record<FrontendAuditLog['category'], React.ElementType>
 
   return (
     <>
@@ -78,7 +91,6 @@ export default function AuditLogsPage() {
       />
       <main className="flex-1 overflow-auto p-4 md:p-6">
         <div className="mx-auto max-w-7xl space-y-6">
-
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <h1 className="text-2xl font-bold tracking-tight">Project Audit Console</h1>
@@ -136,8 +148,17 @@ export default function AuditLogsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((log) => {
-                    const CategoryIcon = categoryIcons[log.category]
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center">
+                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                          <Clock className="h-4 w-4 animate-spin" />
+                          Loading audit records...
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : filtered.map((log) => {
+                    const CategoryIcon = categoryIcons[log.category] || Shield
                     return (
                       <TableRow key={log.id} className="group">
                         <TableCell>
@@ -158,8 +179,8 @@ export default function AuditLogsPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className={severityConfig[log.severity].className}>
-                            {severityConfig[log.severity].label}
+                          <Badge variant="secondary" className={severityConfig[log.severity]?.className || ''}>
+                            {severityConfig[log.severity]?.label || log.severity}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
@@ -225,13 +246,12 @@ export default function AuditLogsPage() {
           </Card>
 
           <div className="flex items-center justify-between px-2">
-            <p className="text-xs text-muted-foreground">Showing 1-7 of 124 project events</p>
+            <p className="text-xs text-muted-foreground">Showing live project events</p>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled>Previous</Button>
               <Button variant="outline" size="sm">Next</Button>
             </div>
           </div>
-
         </div>
       </main>
     </>

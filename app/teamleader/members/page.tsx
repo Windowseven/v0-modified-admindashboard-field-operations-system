@@ -1,49 +1,76 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { mockTeamMembers, MockTeamMember } from '@/lib/mock-teamleader'
+import { teamService } from '@/lib/api/teamService'
 import { cn } from '@/lib/utils'
-import { Users2, MapPin, Clock, Activity, Phone, Mail, ExternalLink } from 'lucide-react'
+import { Users2, MapPin, Clock, Activity, Phone, Mail, ExternalLink, Loader2 } from 'lucide-react'
 
-// Mock phone/email — in production these come from the member's profile
-const memberContacts: Record<string, { phone: string; email: string }> = {
-  'tl-john-doe': { phone: '+255700000001', email: 'john.doe@fieldsync.app' },
-  'tm-jane-smith': { phone: '+255700000002', email: 'jane.smith@fieldsync.app' },
-  'tm-mike-johnson': { phone: '+255700000003', email: 'mike.johnson@fieldsync.app' },
-  'tm-sarah-lee': { phone: '+255700000004', email: 'sarah.lee@fieldsync.app' },
+interface TeamMember {
+  id: string
+  name: string
+  first_name: string
+  email: string
+  role: string
+  avatar?: string
+  status: string
+  phone?: string
+  sessionActive?: boolean
+  currentActivity?: string
+  location?: string
+  distanceFromLeader?: number
+  lastSeen?: string
+  tasksCompleted?: number
+  formsSubmitted?: number
 }
 
 export default function TeamMembersPage() {
   const router = useRouter()
-  const [selectedMember, setSelectedMember] = useState<MockTeamMember | null>(null)
+  const [members, setMembers] = useState<TeamMember[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null)
   const [open, setOpen] = useState(false)
 
-  const statusConfig = {
+  useEffect(() => {
+    fetchMembers()
+  }, [])
+
+  const fetchMembers = async () => {
+    try {
+      setLoading(true)
+      const data = await teamService.getMembers()
+      setMembers(data)
+    } catch (error) {
+      console.error('Failed to fetch members:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const statusConfig: Record<string, string> = {
     online: 'bg-emerald-500',
     active: 'bg-emerald-600',
     idle: 'bg-amber-500',
     offline: 'bg-slate-400',
-  } as const
+  }
 
-  function openMember(member: MockTeamMember) {
+  function openMember(member: TeamMember) {
     setSelectedMember(member)
     setOpen(true)
   }
 
-  function handleCall(member: MockTeamMember) {
-    const contact = memberContacts[member.id]
-    if (contact?.phone) {
-      window.location.href = `tel:${contact.phone}`
+  function handleCall(member: TeamMember) {
+    if (member.phone) {
+      window.location.href = `tel:${member.phone}`
     }
   }
 
-  function handleMessage(member: MockTeamMember) {
+  function handleMessage(member: TeamMember) {
     // Navigate to notifications page (in-app messaging hub)
     setOpen(false)
     router.push('/teamleader/notifications')
@@ -59,16 +86,16 @@ export default function TeamMembersPage() {
         <div className="flex gap-2">
           <Badge variant="outline" className="flex items-center gap-1">
             <Users2 className="h-3 w-3" />
-            {mockTeamMembers.length} Total
+            {members.length} Total
           </Badge>
           <Badge className="flex items-center gap-1">
-            {mockTeamMembers.filter(m => m.status === 'online' || m.status === 'active').length} Active
+            {members.filter(m => m.status === 'online' || m.status === 'active').length} Active
           </Badge>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mockTeamMembers.map((member) => (
+        {members.map((member) => (
           <Card
             key={member.id}
             className="hover:shadow-lg transition-all group cursor-pointer"
@@ -208,7 +235,7 @@ export default function TeamMembersPage() {
                     <div className="flex justify-between">
                       <span>Total Score</span>
                       <Badge className="bg-primary">
-                        {selectedMember.tasksCompleted + selectedMember.formsSubmitted}
+                        {(selectedMember.tasksCompleted || 0) + (selectedMember.formsSubmitted || 0)}
                       </Badge>
                     </div>
                   </CardContent>
@@ -237,9 +264,9 @@ export default function TeamMembersPage() {
                       Send Message
                     </Button>
                   </div>
-                  {memberContacts[selectedMember.id] && (
+                  {(selectedMember as any).phone && (
                     <p className="text-xs text-muted-foreground mt-2 text-center">
-                      {memberContacts[selectedMember.id].phone} · {memberContacts[selectedMember.id].email}
+                      {(selectedMember as any).phone} · {selectedMember.email}
                     </p>
                   )}
                 </CardContent>
@@ -251,3 +278,4 @@ export default function TeamMembersPage() {
     </div>
   )
 }
+

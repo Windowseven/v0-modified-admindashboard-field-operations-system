@@ -6,7 +6,7 @@ import {
   CheckCircle2, XCircle, Clock, Filter,
   Mail, Phone, UsersRound, ArrowUpDown,
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -256,3 +256,4 @@ export default function SupervisorUsersPage() {
     </>
   )
 }
+

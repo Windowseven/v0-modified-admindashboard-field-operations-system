@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   ClipboardList, MapPin, Clock, FileText, ChevronRight,
   CheckCircle2, Circle, Loader2, AlertCircle, Filter,
   Users, User,
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { mockUserTasks, taskSummary, type TaskStatus } from '@/lib/mock-user'
+import { http } from '@/lib/api/httpClient'
+import { syncService } from '@/lib/api/syncService'
+import { useAuth } from '@/lib/auth/AuthContext'
+
+export type TaskStatus = 'pending' | 'in-progress' | 'completed'
 
 const statusConfig: Record<TaskStatus, { label: string; icon: React.ElementType; color: string; bg: string }> = {
   pending: { label: 'Pending', icon: Circle, color: 'text-muted-foreground', bg: 'bg-muted/60' },
@@ -30,9 +34,50 @@ const priorityConfig = {
 }
 
 export default function UserTasksPage() {
+  const { user } = useAuth()
+  const [tasks, setTasks] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | TaskStatus>('all')
 
-  const filtered = filter === 'all' ? mockUserTasks : mockUserTasks.filter((t) => t.status === filter)
+  useEffect(() => {
+    fetchTasks()
+  }, [])
+
+  const fetchTasks = async () => {
+    try {
+      setLoading(true)
+      const res: any = await http.get('/tasks')
+      if (res.status === 'success') {
+        setTasks(res.data.tasks)
+      }
+    } catch (error) {
+      console.error('[Tasks] Fetch failed:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleUpdateStatus = async (taskId: string, newStatus: TaskStatus) => {
+    const task = tasks.find(t => t.id === taskId)
+    if (!task) return
+
+    // Optimistic update
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t))
+
+    // Real update via Sync Service
+    await syncService.enqueue('task_update', `Update task: ${task.title}`, {
+      task_id: taskId,
+      status: newStatus
+    })
+  }
+
+  const filtered = filter === 'all' ? tasks : tasks.filter((t) => t.status === filter)
+
+  const summary = {
+    pending: tasks.filter(t => t.status === 'pending').length,
+    inProgress: tasks.filter(t => t.status === 'in-progress').length,
+    completed: tasks.filter(t => t.status === 'completed').length,
+  }
 
   return (
     <>
@@ -53,9 +98,9 @@ export default function UserTasksPage() {
           {/* Summary pills */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: 'Pending', value: taskSummary.pending, color: 'text-muted-foreground', bg: 'bg-muted/60' },
-              { label: 'In Progress', value: taskSummary.inProgress, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-              { label: 'Completed', value: taskSummary.completed, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+              { label: 'Pending', value: summary.pending, color: 'text-muted-foreground', bg: 'bg-muted/60' },
+              { label: 'In Progress', value: summary.inProgress, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+              { label: 'Completed', value: summary.completed, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
             ].map((s) => (
               <Card key={s.label} className="cursor-pointer" onClick={() => setFilter(
                 s.label === 'In Progress' ? 'in-progress' : s.label.toLowerCase() as any
@@ -88,8 +133,8 @@ export default function UserTasksPage() {
           {/* Task cards */}
           <div className="space-y-3">
             {filtered.map((task) => {
-              const sc = statusConfig[task.status]
-              const pc = priorityConfig[task.priority]
+              const sc = statusConfig[task.status as TaskStatus] || statusConfig.pending
+              const pc = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig.medium
               const StatusIcon = sc.icon
               return (
                 <Card key={task.id} className={cn(
@@ -148,6 +193,7 @@ export default function UserTasksPage() {
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => handleUpdateStatus(task.id, task.status === 'pending' ? 'in-progress' : 'completed')}
                           className={cn(
                             'h-9',
                             task.linkedForm ? '' : 'flex-1',
@@ -191,3 +237,4 @@ export default function UserTasksPage() {
     </>
   )
 }
+

@@ -2,23 +2,47 @@
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { mockTeamMembers } from '@/lib/mock-teamleader'
-import { Users2, MapPin, ListCheck, FileText, Clock, AlertCircle, Activity } from 'lucide-react'
+import { Users2, MapPin, ListCheck, FileText, Clock, AlertCircle, Activity, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useEffect, useState } from 'react'
+import { http } from '@/lib/api/httpClient'
 
 export default function TeamLeaderOverview() {
-  const onlineMembers = mockTeamMembers.filter(m => m.status === 'online' || m.status === 'active').length
-  const totalMembers = mockTeamMembers.length
-  const tasksPending = 3
-  const formsPending = 7
-  const alerts = 2
+  const [stats, setStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
-  const stats = [
-    { title: 'Active Members', value: `${onlineMembers}/${totalMembers}`, icon: Users2, trend: '+2', color: 'bg-emerald-500/10 text-emerald-500' },
-    { title: 'Pending Tasks', value: tasksPending.toString(), icon: ListCheck, trend: '-1', color: 'bg-orange-500/10 text-orange-500' },
-    { title: 'Forms Pending', value: formsPending.toString(), icon: FileText, trend: '+3', color: 'bg-blue-500/10 text-blue-500' },
-    { title: 'Alerts', value: alerts.toString(), icon: AlertCircle, trend: '+1', color: 'bg-destructive/10 text-destructive' },
-  ]
+  useEffect(() => {
+    fetchStats()
+  }, [])
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true)
+      const res: any = await http.get('/team/stats')
+      if (res.status === 'success') {
+        const d = res.data
+        setStats([
+          { title: 'Active Members', value: `${d.activeMembers}/${d.totalMembers}`, icon: Users2, trend: '+2', color: 'bg-emerald-500/10 text-emerald-500' },
+          { title: 'Pending Tasks', value: d.pendingTasks.toString(), icon: ListCheck, trend: '-1', color: 'bg-orange-500/10 text-orange-500' },
+          { title: 'Today Submissions', value: d.todaySubmissions.toString(), icon: FileText, trend: '+3', color: 'bg-blue-500/10 text-blue-500' },
+          { title: 'Active Alerts', value: '0', icon: AlertCircle, trend: '0', color: 'bg-destructive/10 text-destructive' },
+        ])
+      }
+    } catch (error) {
+      console.error('[TL Overview] Fetch failed:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading || !stats) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
 
   return (
     <div className="p-6 space-y-6">
@@ -36,7 +60,7 @@ export default function TeamLeaderOverview() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
+        {stats.map((stat: any, index: number) => (
           <Card key={index} className={cn("hover:shadow-lg transition-all", stat.color)}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
@@ -139,3 +163,4 @@ export default function TeamLeaderOverview() {
     </div>
   )
 }
+

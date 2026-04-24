@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Power, AlertTriangle, Shield, MapPin, Lock, WifiOff, RefreshCw, CheckCircle2, XCircle, Clock } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -335,3 +335,4 @@ export default function EmergencyPage() {
     </>
   )
 }
+

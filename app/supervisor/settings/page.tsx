@@ -6,7 +6,7 @@ import {
   Camera, Save, Laptop, Smartphone, CheckCircle2,
   Trash2, Plus,
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,7 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
+import { ThemeSettingsCard } from '@/components/shared/settings/theme-settings-card'
 
 export default function SupervisorSettingsPage() {
   return (
@@ -32,6 +33,8 @@ export default function SupervisorSettingsPage() {
             <h1 className="text-3xl font-bold tracking-tight">Personal Settings</h1>
             <p className="text-muted-foreground text-lg">Manage your account preferences, notifications, and security</p>
           </div>
+
+          <ThemeSettingsCard />
 
           <Tabs defaultValue="profile" className="space-y-6">
             <TabsList className="bg-muted/50 border h-11 p-1">
@@ -201,3 +204,4 @@ export default function SupervisorSettingsPage() {
     </>
   )
 }
+

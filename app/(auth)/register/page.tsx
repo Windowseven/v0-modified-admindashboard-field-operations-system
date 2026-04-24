@@ -114,7 +114,7 @@ export default function RegisterPage() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"field_worker" | "supervisor">("field_worker");
+  const [role, setRole] = useState<"field_agent" | "supervisor">("field_agent");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -509,3 +509,4 @@ export default function RegisterPage() {
     </div>
   );
 }
+

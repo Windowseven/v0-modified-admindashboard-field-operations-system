@@ -6,7 +6,7 @@ import {
   UserPlus, UserMinus, ClipboardList, MapPin, Settings,
   Shield, CheckCircle2, XCircle, Users, Layers, FileText,
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -209,3 +209,4 @@ export default function SupervisorAuditPage() {
     </>
   )
 }
+

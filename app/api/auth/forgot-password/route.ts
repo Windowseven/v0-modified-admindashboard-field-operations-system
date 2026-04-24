@@ -1,11 +1,5 @@
-import { NextResponse } from 'next/server';
+import { proxyToBackend } from "@/lib/api/backend-proxy";
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  console.log('[Mock API] Forgot password request:', body);
-
-  // Return success even if email not found to prevent enumeration
-  return NextResponse.json({
-    message: 'If an account exists for this email, a reset code will be sent.',
-  });
+  return proxyToBackend(request, "/auth/forgot-password");
 }

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import useSWR from 'swr'
 import {
   Users, FolderKanban, Activity, Server, Database, Shield, Zap,
   RefreshCw, ArrowUpRight, UserCheck, CheckCircle2, AlertTriangle,
@@ -12,60 +13,13 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend,
 } from 'recharts'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-
-const systemHealth = [
-  { title: 'API Server', status: 'healthy' as const, metrics: [{ label: 'Latency', value: '45ms' }, { label: 'Uptime', value: '99.98%' }] },
-  { title: 'Database', status: 'healthy' as const, metrics: [{ label: 'Connections', value: '128' }, { label: 'Query Time', value: '12ms' }] },
-  { title: 'WebSocket', status: 'healthy' as const, metrics: [{ label: 'Active', value: '847' }, { label: 'Msg/sec', value: '1,240' }] },
-  { title: 'Storage', status: 'warning' as const, metrics: [{ label: 'Used', value: '78%' }, { label: 'Total', value: '20GB' }] },
-]
-
-const platformStats = [
-  { title: 'Total Users', value: '2,847', change: '+124', up: true, icon: Users, breakdown: { active: 2341, inactive: 412, suspended: 94 } },
-  { title: 'Supervisors', value: '7', change: '+1', up: true, icon: UserCheck, breakdown: { active: 6, suspended: 1 } },
-  { title: 'Active Projects', value: '7', change: '+2', up: true, icon: FolderKanban, breakdown: { running: 6, frozen: 1 } },
-  { title: 'Live Sessions', value: '234', change: '-18', up: false, icon: Activity, breakdown: { field: 189, idle: 45 } },
-]
-
-const activityData = [
-  { time: '00:00', users: 120, submissions: 45, api: 890 },
-  { time: '04:00', users: 80, submissions: 20, api: 450 },
-  { time: '08:00', users: 450, submissions: 180, api: 2100 },
-  { time: '12:00', users: 680, submissions: 320, api: 3400 },
-  { time: '16:00', users: 720, submissions: 280, api: 3200 },
-  { time: '20:00', users: 340, submissions: 120, api: 1800 },
-  { time: '24:00', users: 150, submissions: 50, api: 920 },
-]
-
-const userDistribution = [
-  { name: 'Field Workers', value: 2456, color: 'hsl(var(--chart-1))' },
-  { name: 'Team Leaders', value: 248, color: 'hsl(var(--chart-2))' },
-  { name: 'Supervisors', value: 7, color: 'hsl(var(--chart-3))' },
-]
-
-const recentActivity = [
-  { type: 'security', message: 'Brute force attempt detected', sub: '198.51.100.22 · 89 attempts', time: '5m ago', icon: Shield, color: 'text-destructive', bg: 'bg-destructive/10' },
-  { type: 'user', message: 'New supervisor registered', sub: 'marie.uwase@fieldsync.io', time: '12m ago', icon: UserCheck, color: 'text-primary', bg: 'bg-primary/10' },
-  { type: 'project', message: 'Project frozen by admin', sub: 'Door-to-Door — Lagos', time: '1h ago', icon: FolderOpen, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-  { type: 'system', message: 'Daily backup completed', sub: 'backup_2026_04_08.sql · 4.2GB', time: '2h ago', icon: Database, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-  { type: 'security', message: 'User account suspended', sub: 'kwame.asante@fieldsync.io', time: '4h ago', icon: Ban, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-]
-
-const projectActivity = [
-  { name: 'Mon', active: 5, new: 1 },
-  { name: 'Tue', active: 5, new: 0 },
-  { name: 'Wed', active: 6, new: 2 },
-  { name: 'Thu', active: 6, new: 0 },
-  { name: 'Fri', active: 7, new: 1 },
-  { name: 'Sat', active: 7, new: 0 },
-  { name: 'Sun', active: 7, new: 1 },
-]
+import { dashboardService } from '@/lib/api/dashboardService'
 
 const quickActions = [
   { label: 'Global Users', sub: 'Manage all accounts', icon: Users, href: '/dashboard/users' },
@@ -78,24 +32,139 @@ const quickActions = [
   { label: 'Emergency', sub: 'God mode controls', icon: Power, href: '/dashboard/emergency' },
 ]
 
-const statusColors = { healthy: 'bg-emerald-500', warning: 'bg-amber-500', critical: 'bg-red-500' }
+const statusColors: Record<string, string> = { healthy: 'bg-emerald-500', warning: 'bg-amber-500', critical: 'bg-red-500' }
 
 export default function DashboardPage() {
   const [refreshing, setRefreshing] = useState(false)
+  const { data: rawData, isLoading, mutate } = useSWR('admin-dashboard-stats', () => dashboardService.getAdminStats())
+  const { data: healthData } = useSWR('admin-system-health', () => dashboardService.getSystemHealth())
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await mutate()
+    setRefreshing(false)
+  }
+
+  const platformStats = [
+    { 
+      title: 'Total Users', 
+      value: rawData ? rawData.platformStats.totalUsers : 0, 
+      change: 'Active', 
+      up: true, 
+      icon: Users, 
+      breakdown: { 
+        Admins: rawData?.platformStats.admins || 0,
+        Supervisors: rawData?.platformStats.supervisors || 0,
+        Agents: rawData?.platformStats.fieldAgents || 0,
+        Online: rawData?.platformStats.onlineUsers || 0,
+      } 
+    },
+    {
+      title: 'Projects',
+      value: rawData ? rawData.projectStats.totalProjects : 0,
+      change: 'Active',
+      up: true,
+      icon: FolderKanban,
+      breakdown: {
+        Active: rawData?.projectStats.activeProjects || 0,
+        'Avg Progress': `${rawData?.projectStats.avgProgress || 0}%`
+      }
+    },
+    {
+      title: 'Submissions',
+      value: rawData ? rawData.submissions : 0,
+      change: '+0%',
+      up: true,
+      icon: Database,
+      breakdown: {
+        Recent: rawData?.recentActivity || 0
+      }
+    },
+    {
+      title: 'Live Sessions',
+      value: rawData ? rawData.platformStats.onlineUsers : 0,
+      change: 'Now',
+      up: true,
+      icon: Activity,
+      breakdown: {
+        'Field Agents': rawData?.platformStats.fieldAgents || 0,
+        'Team Leaders': rawData?.platformStats.teamLeaders || 0
+      }
+    }
+  ]
+
+  const activityData = useMemo(
+    () => rawData?.activitySeries ?? [],
+    [rawData]
+  )
+
+  const activityTotals = useMemo(
+    () => ({
+      users: activityData.reduce((sum, item) => sum + item.users, 0),
+      submissions: activityData.reduce((sum, item) => sum + item.submissions, 0),
+      api: activityData.reduce((sum, item) => sum + item.api, 0),
+    }),
+    [activityData]
+  )
+
+  const heapUsedMb = healthData ? Math.round(healthData.memory.heapUsed / 1024 / 1024) : 0
+  const rssMb = healthData ? Math.round(healthData.memory.rss / 1024 / 1024) : 0
+  const healthStatus = healthData?.database === 'Connected' ? 'healthy' : 'warning'
+  const systemHealth = [
+    {
+      title: 'API Gateway',
+      metrics: [
+        { label: 'Uptime', value: rawData ? `${Math.floor(rawData.systemHealth.uptime / 3600)}h` : '0h' },
+        { label: 'Requests 24h', value: activityTotals.api.toLocaleString() }
+      ],
+      status: rawData ? 'healthy' : 'warning'
+    },
+    {
+      title: 'Database',
+      metrics: [
+        { label: 'Status', value: healthData?.database || 'Unknown' },
+        { label: 'Pool', value: healthData?.poolActive ? 'Active' : 'Inactive' }
+      ],
+      status: healthStatus
+    },
+    {
+      title: 'Memory',
+      metrics: [
+        { label: 'Heap', value: healthData ? `${heapUsedMb} MB` : '-' },
+        { label: 'RSS', value: healthData ? `${rssMb} MB` : '-' }
+      ],
+      status: heapUsedMb > 512 ? 'warning' : 'healthy'
+    }
+  ]
+
+  const userDistribution = [
+    { name: 'Admins', value: rawData?.platformStats.admins || 1, color: '#3b82f6' },
+    { name: 'Supervisors', value: rawData?.platformStats.supervisors || 1, color: '#eab308' },
+    { name: 'Field Agents', value: rawData?.platformStats.fieldAgents || 1, color: '#22c55e' }
+  ]
+
+  const recentActivity = [
+     { message: `${rawData?.recentActivity || 0} audit events in the last 24h`, sub: 'Audit stream', time: rawData?.systemHealth.timestamp ? new Date(rawData.systemHealth.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString(), icon: CheckCircle2, bg: 'bg-emerald-500/10', color: 'text-emerald-500' }
+  ]
+
+  const projectActivity = [
+    { name: 'Current', active: rawData?.projectStats.activeProjects || 0, new: 0 }
+  ]
 
   return (
     <>
       <DashboardHeader title="System Overview" />
       <main className="flex-1 overflow-auto p-4 md:p-6">
         <div className="mx-auto max-w-7xl space-y-6">
-
+          {isLoading && <div className="text-sm text-muted-foreground animate-pulse">Loading platform statistics...</div>}
+          
           {/* Header */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Platform Control Center</h1>
               <p className="text-muted-foreground">System-wide overview · Admin sees everything, controls the platform</p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => { setRefreshing(true); setTimeout(() => setRefreshing(false), 1000) }} disabled={refreshing}>
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing || isLoading}>
               <RefreshCw className={cn('h-4 w-4 mr-2', refreshing && 'animate-spin')} /> Refresh
             </Button>
           </div>
@@ -108,8 +177,8 @@ export default function DashboardPage() {
                   <CardTitle className="text-lg">System Health</CardTitle>
                   <CardDescription>Real-time status of all platform services</CardDescription>
                 </div>
-                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500">
-                  <CheckCircle2 className="h-3 w-3 mr-1" /> All Systems Operational
+                <Badge variant="secondary" className={healthStatus === 'healthy' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}>
+                  <CheckCircle2 className="h-3 w-3 mr-1" /> {healthStatus === 'healthy' ? 'All Systems Operational' : 'Needs Attention'}
                 </Badge>
               </div>
             </CardHeader>
@@ -153,7 +222,7 @@ export default function DashboardPage() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     {Object.entries(stat.breakdown).map(([key, value]) => (
                       <span key={key} className="text-xs text-muted-foreground">
-                        {key}: <span className="text-foreground font-medium">{value}</span>
+                        {key}: <span className="text-foreground font-medium">{String(value)}</span>
                       </span>
                     ))}
                   </div>
@@ -167,7 +236,7 @@ export default function DashboardPage() {
             <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle>Platform Activity</CardTitle>
-                <CardDescription>Active users, submissions, and API calls over 24h</CardDescription>
+                <CardDescription>Real 24-hour activity from audit logs, submissions, and live API traffic</CardDescription>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="users">
@@ -199,6 +268,20 @@ export default function DashboardPage() {
                     )
                   })}
                 </Tabs>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-lg border border-border bg-muted/30 p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Active User Hits</p>
+                    <p className="mt-1 text-2xl font-bold">{activityTotals.users}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/30 p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Submissions in 24h</p>
+                    <p className="mt-1 text-2xl font-bold">{activityTotals.submissions}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/30 p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">API Requests in 24h</p>
+                    <p className="mt-1 text-2xl font-bold">{activityTotals.api}</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 

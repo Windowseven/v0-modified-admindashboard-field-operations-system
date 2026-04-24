@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
-import { ThemeProvider } from '@/components/theme-provider'
+import { ThemeProvider } from '@/components/providers/theme-provider'
 import { AuthProvider } from '@/lib/auth/AuthContext'
-import { AuthErrorBoundary } from '@/components/auth/AuthErrorBoundary'
-import { InactivityWatcher } from '@/components/auth/InactivityWatcher'
+import { AuthErrorBoundary } from '@/components/features/auth/AuthErrorBoundary'
+import { InactivityWatcher } from '@/components/features/auth/InactivityWatcher'
+import { SyncInitializer } from '@/components/features/auth/SyncInitializer'
+import { SecurityInitializer } from '@/components/features/auth/SecurityInitializer'
 import './globals.css'
 
 const geistSans = Geist({ 
@@ -47,7 +49,6 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
 }
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -64,7 +65,9 @@ export default function RootLayout({
         >
           <AuthProvider>
             <AuthErrorBoundary>
+              <SecurityInitializer />
               <InactivityWatcher />
+              <SyncInitializer />
               {children}
             </AuthErrorBoundary>
           </AuthProvider>
@@ -74,3 +77,4 @@ export default function RootLayout({
     </html>
   )
 }
+

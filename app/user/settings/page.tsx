@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   User, Lock, Bell, MapPin, Shield, LogOut,
-  Save, Eye, EyeOff, CheckCircle2, Smartphone,
+  Save, Eye, EyeOff, CheckCircle2, Smartphone, Loader2,
 } from 'lucide-react'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,13 +13,36 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
-import { mockUserProfile } from '@/lib/mock-user'
+import { userService, type ApiUser } from '@/lib/api/userService'
+import { ThemeSettingsCard } from '@/components/shared/settings/theme-settings-card'
 
 export default function UserSettingsPage() {
-  const [locationSharing, setLocationSharing] = useState(mockUserProfile.locationSharingEnabled)
-  const [notifications, setNotifications] = useState(mockUserProfile.notificationsEnabled)
+  const [user, setUser] = useState<ApiUser | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [locationSharing, setLocationSharing] = useState(true)
+  const [notifications, setNotifications] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    fetchProfile()
+  }, [])
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true)
+      const data = await userService.getProfile()
+      if (data) {
+        setUser(data)
+        setLocationSharing(data.location_sharing_enabled ?? true)
+        setNotifications(data.notifications_enabled ?? true)
+      }
+    } catch (error) {
+      console.error('Failed to fetch profile:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSave = () => {
     setSaved(true)
@@ -42,6 +65,8 @@ export default function UserSettingsPage() {
             <p className="text-sm text-muted-foreground">Manage your account and preferences</p>
           </div>
 
+          <ThemeSettingsCard />
+
           {/* Profile card */}
           <Card>
             <CardHeader>
@@ -50,43 +75,51 @@ export default function UserSettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Avatar row */}
-              <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 border border-primary/20 text-xl font-bold text-primary shrink-0">
-                  {mockUserProfile.name.split(' ').map(n => n[0]).join('')}
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-                <div>
-                  <p className="font-bold">{mockUserProfile.name}</p>
-                  <p className="text-sm text-muted-foreground">{mockUserProfile.email}</p>
-                  <Badge variant="secondary" className="text-[10px] mt-1">Field Agent</Badge>
-                </div>
-              </div>
+              ) : (
+                <>
+                  {/* Avatar row */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 border border-primary/20 text-xl font-bold text-primary shrink-0">
+                      {user?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                    </div>
+                    <div>
+                      <p className="font-bold">{user?.name || 'User'}</p>
+                      <p className="text-sm text-muted-foreground">{user?.email || 'email@example.com'}</p>
+                      <Badge variant="secondary" className="text-[10px] mt-1">Field Agent</Badge>
+                    </div>
+                  </div>
 
-              <Separator />
+                  <Separator />
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Full Name</Label>
-                  <Input defaultValue={mockUserProfile.name} className="h-10" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Phone</Label>
-                  <Input defaultValue={mockUserProfile.phone} className="h-10" />
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email</Label>
-                  <Input defaultValue={mockUserProfile.email} type="email" className="h-10" disabled />
-                </div>
-              </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Full Name</Label>
+                      <Input defaultValue={user?.name || ''} className="h-10" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Phone</Label>
+                      <Input defaultValue={user?.phone || ''} className="h-10" />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email</Label>
+                      <Input defaultValue={user?.email || ''} type="email" className="h-10" disabled />
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Read-only field info */}
               <div className="rounded-lg bg-muted/50 p-3 space-y-2">
                 {[
-                  { label: 'Assigned Zone', value: mockUserProfile.assignedZone },
-                  { label: 'Project', value: mockUserProfile.assignedProject },
-                  { label: 'Team', value: mockUserProfile.teamName },
-                  { label: 'Team Leader', value: mockUserProfile.teamLeader },
-                  { label: 'Device ID', value: mockUserProfile.deviceId },
+                  { label: 'Assigned Zone', value: 'TBD' },
+                  { label: 'Project', value: 'TBD' },
+                  { label: 'Team', value: 'TBD' },
+                  { label: 'Team Leader', value: 'TBD' },
+                  { label: 'Device ID', value: 'TBD' },
                 ].map((row) => (
                   <div key={row.label} className="flex justify-between text-xs">
                     <span className="text-muted-foreground">{row.label}</span>
@@ -177,7 +210,7 @@ export default function UserSettingsPage() {
                       <p className="text-xs text-muted-foreground">{pref.desc}</p>
                       {pref.warn && (
                         <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5">
-                          Your team can't see your position
+                          Your team can&apos;t see your position
                         </p>
                       )}
                     </div>
@@ -209,7 +242,7 @@ export default function UserSettingsPage() {
             <CardContent className="space-y-3">
               <div className="rounded-lg bg-muted/50 p-3 space-y-2 text-xs">
                 {[
-                  { label: 'Device ID', value: mockUserProfile.deviceId },
+                  { label: 'Device ID', value: 'TBD' },
                   { label: 'App Version', value: 'FieldSync v1.0.0' },
                   { label: 'Last Sync', value: 'Just now' },
                 ].map((row) => (
@@ -230,3 +263,4 @@ export default function UserSettingsPage() {
     </>
   )
 }
+

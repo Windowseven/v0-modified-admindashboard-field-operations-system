@@ -87,15 +87,21 @@ export function useLogin(): UseLoginReturn {
       try {
         await login(credentials);
         setAttempts(0);
+        setLockedUntil(null);
+        setLockoutRemaining(0);
       } catch {
-        const newAttempts = attempts + 1;
-        setAttempts(newAttempts);
-        if (newAttempts >= MAX_ATTEMPTS) {
-          setLockedUntil(Date.now() + LOCKOUT_DURATION_MS);
-        }
+        setAttempts((current) => {
+          const nextAttempts = current + 1;
+          if (nextAttempts >= MAX_ATTEMPTS) {
+            const nextLockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+            setLockedUntil(nextLockedUntil);
+            setLockoutRemaining(Math.ceil(LOCKOUT_DURATION_MS / 1000));
+          }
+          return nextAttempts;
+        });
       }
     },
-    [login, attempts, lockedUntil]
+    [login, lockedUntil]
   );
 
   return {

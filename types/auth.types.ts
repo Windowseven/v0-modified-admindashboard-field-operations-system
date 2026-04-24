@@ -4,13 +4,13 @@
 // ============================================================
 
 // ─── Roles ──────────────────────────────────────────────────
-export type UserRole = "admin" | "supervisor" | "team_leader" | "field_worker";
+export type UserRole = "admin" | "supervisor" | "team_leader" | "field_agent";
 
 export const ROLES = {
   ADMIN: "admin" as UserRole,
   SUPERVISOR: "supervisor" as UserRole,
   TEAM_LEADER: "team_leader" as UserRole,
-  FIELD_WORKER: "field_worker" as UserRole,
+  FIELD_WORKER: "field_agent" as UserRole,
 } as const;
 
 // ─── Permissions ────────────────────────────────────────────
@@ -54,6 +54,10 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   avatarUrl?: string;
+  avatar?: string;
+  first_name?: string;
+  lastName?: string;
+  phone?: string;
   projectId?: string;    // Supervisor / Team Leader context
   teamId?: string;       // Team Leader / Field Worker context
   zoneId?: string;       // Field Worker context
@@ -146,7 +150,7 @@ export const ROLE_DASHBOARDS: Record<UserRole, string> = {
   admin: "/dashboard",
   supervisor: "/supervisor",
   team_leader: "/teamleader",
-  field_worker: "/user",
+  field_agent: "/user",
 };
 
 // ─── Inactivity config ───────────────────────────────────────

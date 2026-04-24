@@ -71,13 +71,16 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("[Login] handleSubmit called, isLockedOut:", isLockedOut);
     if (isLockedOut) return;
     setTouched({ email: true, password: true });
     const errors = validateLoginForm(email, password);
     if (errors.email || errors.password) {
+      console.log("[Login] Form validation errors:", errors);
       setFormErrors(errors);
       return;
     }
+    console.log("[Login] Calling login with email:", email.trim());
     await login({ email: email.trim(), password, rememberMe });
   };
 
@@ -290,3 +293,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

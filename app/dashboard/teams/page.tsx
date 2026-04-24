@@ -19,7 +19,7 @@ import {
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { DashboardHeader } from '@/components/shared/layout/dashboard-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -585,3 +585,4 @@ export default function TeamsPage() {
     </>
   )
 }
+
